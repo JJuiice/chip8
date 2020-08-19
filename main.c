@@ -1,25 +1,23 @@
+#include "main.h"
 #include "chip8.h"
-
-unsigned short stack[16],
-               op,
-               I,
-               PC,
-               SP;
-
-unsigned char mem[4096],
-              V[16],
-              gfx[64 *32],
-              cKey[16],
-              dTimer,
-              sTimer;
-
-short dFlag;
 
 int main(int argc, char **argv)
 {
-    while(TRUE) {
+    while(RUN_EMULATION) {
 
     }
 
     return 0;
+}
+
+void setupGfx(void) {
+
+}
+
+void setupInput(void) {
+
+}
+
+void drawGfx(void) {
+
 }
