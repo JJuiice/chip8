@@ -59,7 +59,6 @@ void loadGame(const char * name)
 {
     for(int i = 0; i < sizeof(buffer); ++i)
         mem[i + 512] = buffer[i];
-
 }
 
 void emulateCycle(void)
@@ -71,22 +70,42 @@ void emulateCycle(void)
     switch(op & 0xF000) {
         // Add remaining op cases
         case 0x0000:
-            switch(op & 0x000F) {
-                case 0x0000:
+            switch(op & 0x00FF) {
+                case 0x00E0:
                     break;
-                case 0x000E:
+                case 0x00EE:
                     break;
                 default:
-                    printf("Undefined opcode [0x0000]: 0x%X\n", op);
+                    printf("Call op", op);
             }
+            break;
+        case 0x1000:
             break;
         case 0x2000:
             stack[SP] = PC;
             ++SP;
             PC = op & 0x0FFF;
             break;
+        case 0x3000:
+            break;
+        case 0x4000:
+            break;
+        case 0x5000:
+            break;
+        case 0x6000:
+            break;
+        case 0x7000:
+            break;
         case 0x8000:
             switch(op & 0x000F) {
+                case 0x0000:
+                    break;
+                case 0x0001:
+                    break;
+                case 0x0002:
+                    break;
+                 case 0x0003:
+                    break;
                 case 0x0004:
                     if(V[(op & 0x00F0) >> 4] > (0xFF - V[(op & 0x0F00) >> 8]))
                         V[0xF] = 1;
@@ -96,13 +115,27 @@ void emulateCycle(void)
                     V[(op & 0x0F00 >> 8)] += V[(op & 0x00F0) >> 4];
                     PC += 2;
                     break;
+                case 0x0005:
+                   break;
+                case 0x0006:
+                   break;
+                case 0x0007:
+                   break;
+                case 0x000E:
+                   break;
                 default:
                     printf("Undefined opcode [0x8000]: 0x%X\n", op);
             }
             break;
+        case 0x9000:
+            break;
         case 0xA000:
             I = op & 0x0FFF;
             PC += 2;
+            break;
+        case 0xB000:
+            break;
+        case 0xC000:
             break;
         case 0xD000:
         {
@@ -139,15 +172,35 @@ void emulateCycle(void)
 
                     PC += 2;
                     break;
+                case 0x00A1:
+                    break;
+                default:
+                    printf("Undefined opcode [0xE000]: 0x%X\n", op);
             }
             break;
         case 0xF000:
             switch(op & 0x00FF) {
+                case 0x0007:
+                    break;
+                case 0x000A:
+                    break;
+                case 0x0015:
+                    break;
+                case 0x0018:
+                    break;
+                case 0x001E:
+                    break;
+                case 0x0029:
+                    break;
                 case 0x0033:
                     mem[I]     = V[(op & 0x0F00) >> 8] / 100;
                     mem[I + 1] = (V[(op & 0x0F00) >> 8] / 10) % 10;
                     mem[I + 2] = (V[(op & 0x0F00) >> 8] % 100) % 10;
                     PC += 2;
+                    break;
+                case 0x0055:
+                    break;
+                case 0x0065:
                     break;
                 default:
                     printf("Undefined opcode [0xF000]: 0x%X\n", op);
