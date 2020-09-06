@@ -1,5 +1,7 @@
 #include "chip8.h"
+#include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 
 extern char *buffer;
 
@@ -53,6 +55,9 @@ void init(void)
         mem[i] = chip8_fontset[i];
 
     // reset timers
+
+
+    srand(time(0));
 }
 
 void loadGame(const char * name)
@@ -70,16 +75,22 @@ void emulateCycle(void)
     switch(op & 0xF000) {
         // Add remaining op cases
         case 0x0000:
-            switch(op & 0x00FF) {
+        {
+            const unsigned short subOp = op & 0x0FFF;
+            switch(subOp) {
                 case 0x00E0:
+                    // Display clear
                     break;
                 case 0x00EE:
+                    // Subroutine return
                     break;
                 default:
-                    printf("Call op", op);
+                    printf("Call MC routine at address 0x%X\n", subOp);
             }
             break;
+        }
         case 0x1000:
+            PC = op & 0x0FFF;
             break;
         case 0x2000:
             stack[SP] = PC;
@@ -87,24 +98,47 @@ void emulateCycle(void)
             PC = op & 0x0FFF;
             break;
         case 0x3000:
+            if(V[(op & 0x0F00) >> 8] == (op & 0x00FF))
+                PC += 2;
+
+            PC += 2;
             break;
         case 0x4000:
+            if(V[(op & 0x0F00) >> 8] != (op & 0x00FF))
+                PC += 2;
+
+            PC += 2;
             break;
         case 0x5000:
+            if(V[(op & 0x0F00) >> 8] == V[(op & 0x00F0) >> 4])
+                PC += 2;
+
+            PC += 2;
             break;
         case 0x6000:
+            V[(op & 0x0F00) >> 8] = (op & 0x00FF);
+            PC += 2;
             break;
         case 0x7000:
+            V[(op & 0x0F00) >> 8] += (op & 0x00FF);
+            PC += 2;
             break;
         case 0x8000:
             switch(op & 0x000F) {
                 case 0x0000:
+                    V[(op & 0x0F00) >> 8] = V[(op & 0x00F0) >> 4];
+                    PC += 2;
                     break;
                 case 0x0001:
+                    V[(op & 0x0F00) >> 8] = V[(op & 0x0F00) >> 8] | V[(op & 0x00F0) >> 4];
+                    PC += 2;
                     break;
                 case 0x0002:
+                    V[(op & 0x0F00) >> 8] = V[(op & 0x0F00) >> 8] & V[(op & 0x00F0) >> 4];
+                    PC += 2;
                     break;
                  case 0x0003:
+                    V[(op & 0x0F00) >> 8] = V[(op & 0x0F00) >> 8] ^ V[(op & 0x00F0) >> 4];
                     break;
                 case 0x0004:
                     if(V[(op & 0x00F0) >> 4] > (0xFF - V[(op & 0x0F00) >> 8]))
@@ -116,27 +150,56 @@ void emulateCycle(void)
                     PC += 2;
                     break;
                 case 0x0005:
-                   break;
+                    if(V[(op & 0x00F0) >> 4] > V[(op & 0x0F00) >> 8])
+                        V[0xF] = 1;
+                    else
+                        V[0xF] = 0;
+
+                    V[(op & 0x0F00 >> 8)] -= V[(op & 0x00F0) >> 4];
+                    PC += 2;
+                    break;
                 case 0x0006:
-                   break;
+                    V[0xF] = V[(op & 0x0100) >> 8];
+                    V[(op & 0x0F00) >> 8] >>= 1;
+                    PC += 2;
+                    break;
                 case 0x0007:
-                   break;
+                    if(V[(op & 0x0F00) >> 8] > V[(op & 0x00F0) >> 4])
+                        V[0xF] = 1;
+                    else
+                        V[0xF] = 0;
+
+                    V[(op & 0x0F00 >> 8)] = V[(op & 0x00F0) >> 4] - V[(op & 0x0F00) >> 8];
+                    PC += 2;
+                    break;
                 case 0x000E:
-                   break;
+                    V[0xF] = V[(op & 0x0800) >> 8];
+                    V[(op & 0x0F00) >> 8] <<= 1;
+                    PC += 2;
+                    break;
                 default:
                     printf("Undefined opcode [0x8000]: 0x%X\n", op);
             }
             break;
         case 0x9000:
+            if(V[(op & 0x0F00) >> 8] != V[(op & 0x00F0) >> 4])
+                PC += 2;
+
+            PC += 2;
             break;
         case 0xA000:
             I = op & 0x0FFF;
             PC += 2;
             break;
         case 0xB000:
+            PC = V[0] + (op & 0x0FFF);
             break;
         case 0xC000:
+        {
+            const unsigned short randNum = rand() % 0xFF;
+            V[(op & 0x0F00) >> 8] = randNum & (op & 0x00FF);
             break;
+        }
         case 0xD000:
         {
             unsigned short height = op & 0x000F;
@@ -173,6 +236,10 @@ void emulateCycle(void)
                     PC += 2;
                     break;
                 case 0x00A1:
+                    if(cKey[V[(op & 0x0F00) >> 8]] == 0)
+                        PC += 2;
+
+                    PC += 2;
                     break;
                 default:
                     printf("Undefined opcode [0xE000]: 0x%X\n", op);
@@ -181,16 +248,27 @@ void emulateCycle(void)
         case 0xF000:
             switch(op & 0x00FF) {
                 case 0x0007:
+                    V[(op & 0x0F00) >> 8] = dTimer;
+                    PC += 2;
                     break;
                 case 0x000A:
+                    // Await key press to store in VX
                     break;
                 case 0x0015:
+                    dTimer = V[(op & 0x0F00) >> 8];
+                    PC += 2;
                     break;
                 case 0x0018:
+                    sTimer = V[(op & 0x0F00)];
+                    PC += 2;
                     break;
                 case 0x001E:
+                    I += V[(op & 0x0F00) >> 8];
+                    PC += 2;
                     break;
                 case 0x0029:
+                    // Set I to location of sprite character in VX
+                    PC += 2;
                     break;
                 case 0x0033:
                     mem[I]     = V[(op & 0x0F00) >> 8] / 100;
@@ -199,9 +277,29 @@ void emulateCycle(void)
                     PC += 2;
                     break;
                 case 0x0055:
+                {
+                    unsigned short index = I;
+
+                    for (int i = 0; i <= ((op & 0x0F00) >> 8); i++) {
+                        mem[index] = V[i];
+                        ++index;
+                    }
+
+                    PC += 2;
                     break;
+                }
                 case 0x0065:
+                {
+                    unsigned short index = I;
+
+                    for (int i = 0; i <= ((op & 0x0F00) >> 8); i++) {
+                        V[i] = mem[index];
+                        ++index;
+                    }
+
+                    PC += 2;
                     break;
+                }
                 default:
                     printf("Undefined opcode [0xF000]: 0x%X\n", op);
             }
