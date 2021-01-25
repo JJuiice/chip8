@@ -3,18 +3,19 @@
 #include <stdio.h>
 #include <time.h>
 
-extern char *buffer;
+#define MEM_SIZE 4096
+#define GFX_RESOULTION (GFX_WIDTH * GFX_HEIGHT)
+#define STACK_SIZE 16
 
-static unsigned short stack[16],
+static unsigned short stack[STACK_SIZE],
                       op,
-                      dFlag,
                       I,
                       PC,
                       SP;
 
-static unsigned char mem[4096],
+static unsigned char mem[MEM_SIZE],
                      V[16],
-                     gfx[64 *32],
+                     gfx[GFX_RESOULTION],
                      cKey[16],
                      dTimer,
                      sTimer;
@@ -39,31 +40,70 @@ static unsigned char chip8_fontset[80] =
     0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
 
-void init(void)
+unsigned int drawFlag = 0;
+
+int init(void)
 {
+    // Reset pointers, opcodes and timers
     PC = 0x200;
     op = 0;
     I = 0;
     SP = 0;
+    dTimer = 60;
+    sTimer = 60;
 
-    // clear display
-    // clear stak
-    // clear reg V0 - VF
-    // clear mem
+    int i;
+    for(i = 0; i < MEM_SIZE; i++) {
+        // clear stack and reg V0 - VF
+        if (i < STACK_SIZE) {
+            stack[i] = 0;
+            V[i] = 0;
+        }
 
-    for(int i = 0; i < 80; ++i)
+        // clear display
+        if (i < GFX_RESOULTION) {
+            gfx[i] = 0;
+        }
+        
+        // clear mem
+        mem[i] = 0;
+    }
+
+    for(i = 0; i < 80; ++i)
         mem[i] = chip8_fontset[i];
 
-    // reset timers
-
-
     srand(time(0));
+
+    return 0;
 }
 
-void loadGame(const char * name)
+int loadGame(const char *name)
 {
-    for(int i = 0; i < sizeof(buffer); ++i)
+    FILE *game = fopen(name, "rb");
+
+    if (game == NULL) {
+        fprintf(stderr, "Cannot open game file\n");
+        return 1;
+    }
+
+    fseek(game, 0L, SEEK_END);
+    const size_t BUFFER_SIZE = ftell(game);
+    fseek(game, 0L, SEEK_SET);
+
+    unsigned char buffer[BUFFER_SIZE];
+    size_t bytesRead = 0;
+
+    bytesRead = fread(buffer, sizeof(unsigned char), BUFFER_SIZE, game);
+
+    if (bytesRead != BUFFER_SIZE) {
+        fprintf(stderr, "Bytes read does not match file size\n");
+        return 1;
+    }
+
+    for(int i = 0; i < BUFFER_SIZE; ++i)
         mem[i + 512] = buffer[i];
+    
+    return 0;
 }
 
 void emulateCycle(void)
@@ -218,8 +258,8 @@ void emulateCycle(void)
 
                         gfx[x + xCord + ((y + yCord) * 64)] ^= 1;
 
-                        if (!dFlag)
-                            dFlag = 1;
+                        if (!drawFlag)
+                            drawFlag = 1;
                     }
                 }
             }

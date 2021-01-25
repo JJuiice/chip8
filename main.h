@@ -3,7 +3,7 @@
 
 #define RUN_EMULATION 1
 
-void setupGfx(void);
+int setupGfx(void);
 void setupInput(void);
 void drawGfx(void);
 
