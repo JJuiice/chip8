@@ -1,5 +1,7 @@
 #ifndef CHIP8
 #define CHIP8
+#include <SDL2/SDL.h>
+
 #define GFX_WIDTH 64
 #define GFX_HEIGHT 32
 
