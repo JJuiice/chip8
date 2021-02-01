@@ -1,8 +1,12 @@
 #include "chip8.h"
 #include <string.h>
+#include <math.h>
+#include <stdio.h>
 
-#define SCREEN_SCALE 10
-#define SCREEN_BPP 32
+#define SCREEN_SCALE 5 
+
+#define FPS 60
+#define MS_PER_FPS (1000 / FPS)
 
 typedef struct KeyMap
 {
@@ -17,80 +21,51 @@ typedef struct Display
     SDL_Texture *texture;
 } Display;
 
-int main(int argc, char **argv)
+void errQuit(const char *msg)
 {
-    KeyMap keyMap[KEY_NUM];
-    Display display;
-
-    if(argc <= 1) {
-        fprintf(stderr, "No game file specified!");
-    }
-
-    if(setupGfx(&display, argv[1]) || setupInput(&keyMap) || init() || loadGame(argv[1]))
-        return 1;
-
-    int run = 1;
-    while(run) {
-        emulateCycle();
-
-        if(drawFlag)
-            drawGfx(&display);
-        
-        setKeys();
-    }
-
-    cleanGfx(&display);
-    return 0;
-}
-
-int sdlErr(const char *msg)
-{
-    printf("%s: %s\n", msg, SDL_GetError());
+    fprintf(stderr, "%s\n", msg);
+    SDL_ClearError();
     SDL_Quit();
-    return 1;
+    exit(1);
 }
 
-int checkSDLError(int line)
+void checkSDLError(int line, const char *msg)
 {
 	const char *error = SDL_GetError();
 	if (*error != '\0')
 	{
-        char sdlError[500];
-        sprintf(sdlError, "SDL Error: %s\n", *error);
-		if (line != -1)
-			sprintf(*sdlError, "%s + line: %i\n", *sdlError, line);
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR, *sdlError);
-		SDL_ClearError();
-        #ifndef NDEBUG
-        fprintf(stderr, *sdlError);
-        #endif
-        return 1;
+        char *fullError;
+        char *sdlError;
+        snprintf(sdlError, 13 + strlen(error),"SDL Error: %s\n", error);
+		if (line != -1) {
+            int numOfDigits = floor(log10(abs((double) line)) + 1);
+			snprintf(fullError, strlen(sdlError) + 11 + numOfDigits, "%s + line: %i\n", sdlError, line);
+        } else {
+            fullError = sdlError;
+        }
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "%s", fullError);
+        errQuit(msg);
 	}
-    return 0;
 }
 
-int setupGfx(Display *display, const char *game) {
+void setupGfx(Display *display, const char *game) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
-        return sdlErr("Unable to initialize SDL");
+        errQuit("Unable to initialize SDL");
 
     display->window = SDL_CreateWindow(
-                    *game,
+                    game,
                     SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                     GFX_WIDTH * SCREEN_SCALE, GFX_HEIGHT * SCREEN_SCALE,
                     SDL_WINDOW_SHOWN
                     );
-
-    if (checkSDLError(__LINE__))
-        return sdlErr("Error creating window");
+    checkSDLError(__LINE__, "Error creating window");
 
     display->renderer = SDL_CreateRenderer(
                     display->window,
                     -1,
                     SDL_RENDERER_ACCELERATED
                     );
-    
-    if (checkSDLError(__LINE__))
-        return sdlErr("Error creating renderer");
+    checkSDLError(__LINE__, "Error creating renderer");
     
     display->texture = SDL_CreateTexture(
                     display->renderer,
@@ -99,43 +74,37 @@ int setupGfx(Display *display, const char *game) {
                     GFX_WIDTH,
                     GFX_HEIGHT
                     );
-
-    if (checkSDLError(__LINE__))
-        return sdlErr("Error creating renderer");
- 
-    return 0;
+    checkSDLError(__LINE__, "Error creating renderer");
 }
 
-int drawGfx(Display *display) {
+void drawGfx(Display *display) {
     SDL_UpdateTexture(display->texture, NULL, gfx, GFX_WIDTH * sizeof(char));
-
-    if (checkSDLError(__LINE__))
-        return sdlErr("Error updating texture");
+    checkSDLError(__LINE__, "Error updating texture");
 
     SDL_RenderCopy(display->renderer, display->texture, NULL, NULL);
-
-    if (checkSDLError(__LINE__))
-        return sdlErr("Error copying texture to renderer");
+    checkSDLError(__LINE__, "Error copying texture to renderer");
 
     SDL_RenderPresent(display->renderer);
-
-    if (checkSDLError(__LINE__))
-        return sdlErr("Error copying texture to renderer");
-    
-    return 0;
+    checkSDLError(__LINE__, "Error copying texture to renderer");
 }
 
-int cleanGfx(Display *display) {
+void cleanGfx(Display *display) {
     SDL_DestroyTexture(display->texture);
+    checkSDLError(__LINE__, "Error destroying texture");
+    
     SDL_DestroyRenderer(display->renderer);
+    checkSDLError(__LINE__, "Error destroying renderer");
+
     SDL_DestroyWindow(display->window);
+    checkSDLError(__LINE__, "Error destroying window");
+    
     SDL_Quit();
 }
 
-int setupInput(KeyMap keyMap[KEY_NUM]) {
+void setupInput(KeyMap keyMap[KEY_NUM]) {
     int error = 0;
     const short valueLength = 5;
-    const SDL_Scancode *keys = {
+    const SDL_Scancode keys[] = {
         SDL_SCANCODE_X, SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3,
         SDL_SCANCODE_Q, SDL_SCANCODE_W, SDL_SCANCODE_E, SDL_SCANCODE_A,
         SDL_SCANCODE_S, SDL_SCANCODE_D, SDL_SCANCODE_Z, SDL_SCANCODE_C,
@@ -148,8 +117,46 @@ int setupInput(KeyMap keyMap[KEY_NUM]) {
         memcpy(keyMap[i].mapped_value, &fontset[i*valueLength], valueLength);
     }
 
-    if(checkSDLError(__LINE__))
-        error = sdlErr("Error mapping keyboard");
+    checkSDLError(__LINE__, "Error mapping keyboard");
+}
 
-    return error;
+int main(int argc, char **argv)
+{
+    KeyMap keyMap[KEY_NUM];
+    Display display;
+
+    if(argc <= 1)
+        errQuit("No game file specified!");
+
+    setupGfx(&display, argv[1]);
+    setupInput(keyMap);
+
+    init();
+    loadGame(argv[1]);
+
+    SDL_Event event;
+    int run = 1;
+    while(run) {
+        uint32_t startTick = SDL_GetTicks();
+
+        emulateCycle();
+        if(drawFlag) {
+            drawGfx(&display);
+            drawFlag = 0;
+        }
+        
+        uint32_t emulationSpeed = SDL_GetTicks() - startTick;
+        if (emulationSpeed < MS_PER_FPS)
+            SDL_Delay(MS_PER_FPS - emulationSpeed);
+
+
+        while(SDL_PollEvent(&event)) {
+            if(event.type == SDL_QUIT) {
+                run = 0;
+            }
+        }
+    }
+
+    cleanGfx(&display);
+    exit(0);
 }

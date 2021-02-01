@@ -18,7 +18,7 @@ static unsigned char mem[MEM_SIZE],
                      dTimer,
                      sTimer;
 
-unsigned int drawFlag = 0;
+unsigned int drawFlag;
 unsigned char gfx[GFX_RESOULTION];
 unsigned char fontset[80] =
 {
@@ -40,7 +40,7 @@ unsigned char fontset[80] =
     0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
 
-int init(void)
+void init(void)
 {
     // Reset pointers, opcodes and timers
     PC = 0x200;
@@ -49,6 +49,7 @@ int init(void)
     SP = 0;
     dTimer = 60;
     sTimer = 60;
+    drawFlag = 0;
 
     int i;
     for(i = 0; i < MEM_SIZE; i++) {
@@ -71,18 +72,14 @@ int init(void)
         mem[i] = fontset[i];
 
     srand(time(0));
-
-    return 0;
 }
 
-int loadGame(const char *name)
+void loadGame(const char *name)
 {
     FILE *game = fopen(name, "rb");
 
-    if (game == NULL) {
-        fprintf(stderr, "Cannot open game file\n");
-        return 1;
-    }
+    if (game == NULL)
+        errQuit("Cannot open game file\n");
 
     fseek(game, 0L, SEEK_END);
     const size_t BUFFER_SIZE = ftell(game);
@@ -93,15 +90,11 @@ int loadGame(const char *name)
 
     bytesRead = fread(buffer, sizeof(unsigned char), BUFFER_SIZE, game);
 
-    if (bytesRead != BUFFER_SIZE) {
-        fprintf(stderr, "Bytes read does not match file size\n");
-        return 1;
-    }
+    if (bytesRead != BUFFER_SIZE)
+        errQuit("Bytes read does not match file size\n");
 
     for(int i = 0; i < BUFFER_SIZE; ++i)
         mem[i + 512] = buffer[i];
-    
-    return 0;
 }
 
 void emulateCycle(void)
@@ -117,13 +110,18 @@ void emulateCycle(void)
             const unsigned short subOp = op & 0x0FFF;
             switch(subOp) {
                 case 0x00E0:
-                    // Display clear
+                {
+                    int i;
+                    for(i = 0; i < GFX_RESOULTION; i++)
+                        gfx[i] = 0;
+                    drawFlag = 1;
                     break;
+                }
                 case 0x00EE:
                     // Subroutine return
                     break;
                 default:
-                    printf("Call MC routine at address 0x%X\n", subOp);
+                    fprintf(stderr, "Call MC routine at address 0x%X\n", subOp);
             }
             break;
         }
@@ -216,7 +214,7 @@ void emulateCycle(void)
                     PC += 2;
                     break;
                 default:
-                    printf("Undefined opcode [0x8000]: 0x%X\n", op);
+                    fprintf(stderr, "Undefined opcode [0x8000]: 0x%X\n", op);
             }
             break;
         case 0x9000:
@@ -280,7 +278,7 @@ void emulateCycle(void)
                     PC += 2;
                     break;
                 default:
-                    printf("Undefined opcode [0xE000]: 0x%X\n", op);
+                    fprintf(stderr, "Undefined opcode [0xE000]: 0x%X\n", op);
             }
             break;
         case 0xF000:
@@ -339,11 +337,11 @@ void emulateCycle(void)
                     break;
                 }
                 default:
-                    printf("Undefined opcode [0xF000]: 0x%X\n", op);
+                    fprintf(stderr, "Undefined opcode [0xF000]: 0x%X\n", op);
             }
             break;
         default:
-            printf("Undefined opcode: 0x%X\n", op);
+            fprintf(stderr, "Undefined opcode: 0x%X\n", op);
             // Return error?
     }
 
