@@ -4,8 +4,12 @@
 
 #define GFX_WIDTH 64
 #define GFX_HEIGHT 32
+#define GFX_RESOULTION (GFX_WIDTH * GFX_HEIGHT)
+#define KEY_NUM 16
 
 extern unsigned int drawFlag;
+extern unsigned char gfx[GFX_RESOULTION];
+extern unsigned char fontset[80];
 
 void emulateCycle(void),
      setKeys(void);

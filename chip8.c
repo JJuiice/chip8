@@ -4,7 +4,6 @@
 #include <time.h>
 
 #define MEM_SIZE 4096
-#define GFX_RESOULTION (GFX_WIDTH * GFX_HEIGHT)
 #define STACK_SIZE 16
 
 static unsigned short stack[STACK_SIZE],
@@ -15,12 +14,13 @@ static unsigned short stack[STACK_SIZE],
 
 static unsigned char mem[MEM_SIZE],
                      V[16],
-                     gfx[GFX_RESOULTION],
-                     cKey[16],
+                     cKey[KEY_NUM],
                      dTimer,
                      sTimer;
 
-static unsigned char chip8_fontset[80] =
+unsigned int drawFlag = 0;
+unsigned char gfx[GFX_RESOULTION];
+unsigned char fontset[80] =
 {
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
     0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -39,8 +39,6 @@ static unsigned char chip8_fontset[80] =
     0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
     0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
-
-unsigned int drawFlag = 0;
 
 int init(void)
 {
@@ -70,7 +68,7 @@ int init(void)
     }
 
     for(i = 0; i < 80; ++i)
-        mem[i] = chip8_fontset[i];
+        mem[i] = fontset[i];
 
     srand(time(0));
 
