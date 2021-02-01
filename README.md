@@ -9,7 +9,7 @@
 
 ## Usage
 ```
-git clone https://github.com/O-Juice/chip8.gits
+git clone https://github.com/O-Juice/chip8.git
 cd chip8
 make [win (default, windows [.exe]) | lnx (Linux [.out])]
 ``` 

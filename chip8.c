@@ -105,6 +105,7 @@ void emulateCycle(void)
     // Decode
     switch(op & 0xF000) {
         // Add remaining op cases
+        // Errors need to properly exit
         case 0x0000:
         {
             const unsigned short subOp = op & 0x0FFF;
