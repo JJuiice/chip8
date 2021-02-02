@@ -3,8 +3,9 @@
 #include "error_management.h"
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 
-#define SCREEN_SCALE 5 
+#define SCREEN_SCALE 10 
 
 #define FPS 60
 #define MS_PER_FPS (1000 / FPS)
@@ -48,6 +49,10 @@ static void setupGfx(Display *display, const char *game) {
 }
 
 static void drawGfx(Display *display) {
+    #ifndef NDEBUG
+    fprintf(stderr, "Drawing Graphics\n");
+    #endif
+
     SDL_UpdateTexture(display->texture, NULL, gfx, GFX_WIDTH * sizeof(char));
     checkSDLError(__LINE__, "Error updating texture");
 
@@ -80,12 +85,15 @@ static void askGameName(char name[MAX_FILE_LEN])
 int main(int argc, char **argv)
 {
     Display display;
-    char name[MAX_FILE_LEN];
+    char name[MAX_FILE_LEN] = "Particle Demo [zeroZshadow, 2008].ch8";
 
     setupGfx(&display, argv[1]);
 
     init();
-    askGameName(name);
+
+//    askGameName(name);
+//    name[strlen(name) - 1] = '\0';
+
     loadGame(name);
 
     SDL_Event event;
