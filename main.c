@@ -53,7 +53,7 @@ static void drawGfx(Display *display) {
     fprintf(stderr, "Drawing Graphics\n");
     #endif
 
-    SDL_UpdateTexture(display->texture, NULL, gfx, GFX_WIDTH * sizeof(char));
+    SDL_UpdateTexture(display->texture, NULL, gfx, GFX_WIDTH * sizeof(uint32_t));
     checkSDLError(__LINE__, "Error updating texture");
 
     SDL_RenderCopy(display->renderer, display->texture, NULL, NULL);
@@ -85,19 +85,19 @@ static void askGameName(char name[MAX_FILE_LEN])
 int main(int argc, char **argv)
 {
     Display display;
-    char name[MAX_FILE_LEN] = "Particle Demo [zeroZshadow, 2008].ch8";
+    char name[MAX_FILE_LEN];
 
-    setupGfx(&display, argv[1]);
+    setupGfx(&display, "Chip8");
 
     init();
 
-//    askGameName(name);
-//    name[strlen(name) - 1] = '\0';
+    askGameName(name);
+    name[strlen(name) - 1] = '\0';
 
     loadGame(name);
 
     SDL_Event event;
-    int run = 1;
+    uint8_t run = 1;
     while(run) {
         uint32_t startTick = SDL_GetTicks();
 

@@ -9,20 +9,21 @@
 #define MEM_SIZE 4096
 #define STACK_SIZE 16
 
-static unsigned short stack[STACK_SIZE],
-                      op,
-                      I,
-                      PC,
-                      SP;
+static uint16_t stack[STACK_SIZE];
+static uint16_t op;
+static uint16_t I;
+static uint16_t PC;
+static uint16_t SP;
 
-static unsigned char mem[MEM_SIZE],
-                     V[16],
-                     dTimer,
-                     sTimer;
+static uint8_t mem[MEM_SIZE];
+static uint8_t V[16];
 
-unsigned int drawFlag;
-unsigned char gfx[GFX_RESOULTION];
-const unsigned char fontset[80] =
+static uint8_t dTimer;
+static uint8_t sTimer;
+
+uint8_t drawFlag;
+uint32_t gfx[GFX_RESOULTION];
+const uint8_t fontset[80] =
 {
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
     0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -63,7 +64,7 @@ void init(void)
     // clear stack, reg V0 - VF, display, and initialize mem
     memset(stack, 0, sizeof(stack));
     memset(V, 0, sizeof(V));
-    memset(gfx, 0, sizeof(gfx));
+    memset(gfx, PIXEL_OFF, sizeof(gfx));
     memcpy(mem, fontset, sizeof(fontset));
 
     srand(time(NULL));
@@ -84,10 +85,10 @@ void loadGame(const char *name)
     const size_t BUFFER_SIZE = ftell(game);
     fseek(game, 0L, SEEK_SET);
 
-    unsigned char buffer[BUFFER_SIZE];
+    uint8_t buffer[BUFFER_SIZE];
     size_t bytesRead = 0;
 
-    bytesRead = fread(buffer, sizeof(unsigned char), BUFFER_SIZE, game);
+    bytesRead = fread(buffer, sizeof(uint8_t), BUFFER_SIZE, game);
 
     if (bytesRead != BUFFER_SIZE)
         errQuit("Bytes read does not match file size");
@@ -119,14 +120,12 @@ void emulateCycle(void)
     switch(op & 0xF000) {
         case 0x0000:
         {
-            const unsigned short subOp = op & 0x0FFF;
+            const uint16_t subOp = op & 0x0FFF;
             switch(subOp) {
                 case 0x00E0:
                 {
                     logOps("0x00E0: Clear display");
-                    int i;
-                    for(i = 0; i < GFX_RESOULTION; i++)
-                        gfx[i] = 0;
+                    memset(gfx, 0, sizeof(gfx));
                     drawFlag = 1;
                     break;
                 }
@@ -182,75 +181,74 @@ void emulateCycle(void)
             PC += 2;
             break;
         case 0x8000:
-            switch(op & 0x000F) {
+        {
+            const uint16_t x = (op & 0x0F00) >> 8;
+            const uint16_t y = (op & 0x00F0) >> 4;
+            
+            switch(op & 0x000F)
+            {
                 case 0x0000:
                     logOps("0x8XY0: VX = VY");
-                    V[(op & 0x0F00) >> 8] = V[(op & 0x00F0) >> 4];
-                    PC += 2;
+                    V[x] = V[y];
                     break;
                 case 0x0001:
-                    logOps("0x8XY1: VX|VY");
-                    V[(op & 0x0F00) >> 8] = V[(op & 0x0F00) >> 8] | V[(op & 0x00F0) >> 4];
-                    PC += 2;
+                    logOps("0x8XY1: VX = VX | VY");
+                    V[x] = V[x] | V[y];
                     break;
                 case 0x0002:
-                    logOps("0x8XY2: VX&VY");
-                    V[(op & 0x0F00) >> 8] = V[(op & 0x0F00) >> 8] & V[(op & 0x00F0) >> 4];
-                    PC += 2;
+                    logOps("0x8XY2: VX = VX & VY");
+                    V[x] = V[x] & V[y];
                     break;
                  case 0x0003:
-                    logOps("0x8XY3: VX^VY");
-                    V[(op & 0x0F00) >> 8] = V[(op & 0x0F00) >> 8] ^ V[(op & 0x00F0) >> 4];
+                    logOps("0x8XY3: VX = VX ^ VY");
+                    V[x] = V[x] ^ V[y];
                     break;
                 case 0x0004:
-                    logOps("0x8XY4: VX+=VY (With VF Carry Flag)");
-                    if(V[(op & 0x00F0) >> 4] > (0xFF - V[(op & 0x0F00) >> 8]))
+                    logOps("0x8XY4: VX += VY (With VF Carry Flag)");
+                    if(V[y] > (0xFF - V[x]))
                         V[0xF] = 1;
                     else
                         V[0xF] = 0;
 
-                    V[(op & 0x0F00 >> 8)] += V[(op & 0x00F0) >> 4];
-                    PC += 2;
+                    V[x] += V[y];
                     break;
                 case 0x0005:
                     logOps("0x8XY5: VX-=VY (With VF Carry Flag)");
-                    if(V[(op & 0x00F0) >> 4] > V[(op & 0x0F00) >> 8])
+                    if(V[y] > V[x])
                         V[0xF] = 1;
                     else
                         V[0xF] = 0;
 
-                    V[(op & 0x0F00 >> 8)] -= V[(op & 0x00F0) >> 4];
-                    PC += 2;
+                    V[x] -= V[y];
                     break;
                 case 0x0006:
                     logOps("0x8XY6: Store VX LSB in VF LSB, then VX>>=1");
-                    V[0xF] = V[(op & 0x0F00) >> 8] & 1;
-                    V[(op & 0x0F00) >> 8] >>= 1;
-                    PC += 2;
+                    V[0xF] = V[x] & 0x1;
+                    V[x] >>= 1;
                     break;
                 case 0x0007:
                     logOps("0x8XY7: VX=VY-VX (with VF carry)");
-                    if(V[(op & 0x0F00) >> 8] > V[(op & 0x00F0) >> 4])
-                        V[0xF] = 1;
-                    else
+                    if(V[x] > V[y])
                         V[0xF] = 0;
+                    else
+                        V[0xF] = 1;
 
-                    V[(op & 0x0F00 >> 8)] = V[(op & 0x00F0) >> 4] - V[(op & 0x0F00) >> 8];
-                    PC += 2;
+                    V[x] = V[y] - V[x];
                     break;
                 case 0x000E:
                 {
                     logOps("0x8XYE: Store VX MSB in VF LSB, then VX<<=1");
-                    unsigned short x = (op & 0x0F00) >> 8;
                     V[0xF] = V[x] & 0x80;
                     V[x] <<= 1;
-                    PC += 2;
                     break;
                 }
                 default:
                     opErr("Undefined opcode [0x8000]: 0x");
             }
+            
+            PC += 2;
             break;
+        }
         case 0x9000:
             logOps("0x9XY0: Skip next intruction if VX != VY");
             if(V[(op & 0x0F00) >> 8] != V[(op & 0x00F0) >> 4])
@@ -270,7 +268,7 @@ void emulateCycle(void)
         case 0xC000:
         {
             logOps("CXNN: VX=rand()&NN");
-            const unsigned short randNum = rand() % 0xFF;
+            const uint8_t randNum = rand() % 0xFF;
             V[(op & 0x0F00) >> 8] = randNum & (op & 0x00FF);
             PC += 2;
             break;
@@ -278,23 +276,23 @@ void emulateCycle(void)
         case 0xD000:
         {
             logOps("DXYN: draw(VX, VY, N)");
-            uint8_t n = op & 0x000F;
             uint8_t x = V[(op & 0x0F00) >> 8];
             uint8_t y = V[(op & 0x00F0) >> 4];
+            uint8_t n = op & 0x000F;
             V[0xF] = 0;
 
             for(int yCoord = 0; yCoord < n; yCoord++) {
                 uint8_t pixel = mem[I + yCoord];
                 for(int xCoord = 0; xCoord < 8; xCoord++) {
-                    if((pixel & (0x80 >> xCoord))) {
+                    if(pixel & (0x80 >> xCoord)) {
                         int gfxInx = (x + xCoord) % GFX_WIDTH +
-                                     ((y + yCoord) * GFX_HEIGHT) *
+                                     ((y + yCoord) % GFX_HEIGHT) *
                                      GFX_WIDTH;
 
-                        if(gfx[gfxInx]) 
+                        if(gfx[gfxInx])
                             V[0xF] = 1;
 
-                        gfx[gfxInx] ^= 1;
+                        gfx[gfxInx] ^= ~PIXEL_OFF;
 
                         if (!drawFlag)
                             drawFlag = 1;
