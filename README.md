@@ -1,4 +1,4 @@
-# Chip 8 Emulator (WiP)
+# Chip 8 Emulator
 
 ## Requirements
 - gcc
