@@ -127,6 +127,7 @@ void emulateCycle(void)
                     logOps("0x00E0: Clear display");
                     memset(gfx, 0, sizeof(gfx));
                     drawFlag = 1;
+                    PC += 2;
                     break;
                 }
                 case 0x00EE:
