@@ -1,7 +1,10 @@
+#include "constants.h"
 #include "chip8.h"
+#include "error_management.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <string.h>
 
 #define MEM_SIZE 4096
 #define STACK_SIZE 16
@@ -14,13 +17,12 @@ static unsigned short stack[STACK_SIZE],
 
 static unsigned char mem[MEM_SIZE],
                      V[16],
-                     cKey[KEY_NUM],
                      dTimer,
                      sTimer;
 
 unsigned int drawFlag;
 unsigned char gfx[GFX_RESOULTION];
-unsigned char fontset[80] =
+const unsigned char fontset[80] =
 {
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
     0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -39,6 +41,13 @@ unsigned char fontset[80] =
     0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
     0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
+const SDL_Scancode key_map[KEY_NUM] =
+{
+    SDL_SCANCODE_X, SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3,
+    SDL_SCANCODE_Q, SDL_SCANCODE_W, SDL_SCANCODE_E, SDL_SCANCODE_A,
+    SDL_SCANCODE_S, SDL_SCANCODE_D, SDL_SCANCODE_Z, SDL_SCANCODE_C,
+    SDL_SCANCODE_4, SDL_SCANCODE_R, SDL_SCANCODE_F, SDL_SCANCODE_V
+};
 
 void init(void)
 {
@@ -47,39 +56,29 @@ void init(void)
     op = 0;
     I = 0;
     SP = 0;
-    dTimer = 60;
-    sTimer = 60;
+    dTimer = 0;
+    sTimer = 0;
     drawFlag = 0;
 
-    int i;
-    for(i = 0; i < MEM_SIZE; i++) {
-        // clear stack and reg V0 - VF
-        if (i < STACK_SIZE) {
-            stack[i] = 0;
-            V[i] = 0;
-        }
+    // clear stack, reg V0 - VF, display, and initialize mem
+    memset(stack, 0, sizeof(stack));
+    memset(V, 0, sizeof(V));
+    memset(gfx, 0, sizeof(gfx));
+    memcpy(mem, fontset, sizeof(fontset));
 
-        // clear display
-        if (i < GFX_RESOULTION) {
-            gfx[i] = 0;
-        }
-        
-        // clear mem
-        mem[i] = 0;
-    }
-
-    for(i = 0; i < 80; ++i)
-        mem[i] = fontset[i];
-
-    srand(time(0));
+    srand(time(NULL));
 }
 
 void loadGame(const char *name)
 {
     FILE *game = fopen(name, "rb");
 
-    if (game == NULL)
-        errQuit("Cannot open game file\n");
+    if (game == NULL) {
+        const char *err = "Cannot open game file: %s";
+        char msg[strlen(err) - 2 + strlen(name) + 1];
+        sprintf(msg, err, name);
+        errQuit(msg);
+    }
 
     fseek(game, 0L, SEEK_END);
     const size_t BUFFER_SIZE = ftell(game);
@@ -91,10 +90,17 @@ void loadGame(const char *name)
     bytesRead = fread(buffer, sizeof(unsigned char), BUFFER_SIZE, game);
 
     if (bytesRead != BUFFER_SIZE)
-        errQuit("Bytes read does not match file size\n");
+        errQuit("Bytes read does not match file size");
 
-    for(int i = 0; i < BUFFER_SIZE; ++i)
-        mem[i + 512] = buffer[i];
+    memcpy(&mem[512], buffer, sizeof(buffer));
+}
+
+static void opErr(char *errMsg, unsigned short op)
+{
+    char msg[strlen(errMsg) + sizeof(short) + 1];
+    const char *err = strcat(errMsg, "%X");
+    sprintf(msg, err, op);
+    errQuit(msg);
 }
 
 void emulateCycle(void)
@@ -104,8 +110,6 @@ void emulateCycle(void)
 
     // Decode
     switch(op & 0xF000) {
-        // Add remaining op cases
-        // Errors need to properly exit
         case 0x0000:
         {
             const unsigned short subOp = op & 0x0FFF;
@@ -119,10 +123,11 @@ void emulateCycle(void)
                     break;
                 }
                 case 0x00EE:
-                    // Subroutine return
+                    --SP; 
+                    PC = stack[SP];
                     break;
                 default:
-                    fprintf(stderr, "Call MC routine at address 0x%X\n", subOp);
+                    errQuit("MC Subroutines are ignored my modern interpreters");
             }
             break;
         }
@@ -215,7 +220,7 @@ void emulateCycle(void)
                     PC += 2;
                     break;
                 default:
-                    fprintf(stderr, "Undefined opcode [0x8000]: 0x%X\n", op);
+                    opErr("Undefined opcode [0x8000]: 0x", op);
             }
             break;
         case 0x9000:
@@ -267,19 +272,19 @@ void emulateCycle(void)
         case 0xE000:
             switch(op & 0x00FF) {
                 case 0x009E:
-                    if(cKey[V[(op & 0x0F00) >> 8]] != 0)
+                    if(SDL_GetKeyboardState(NULL)[key_map[V[(op & 0x0F00) >> 8]]])
                         PC += 2;
 
                     PC += 2;
                     break;
                 case 0x00A1:
-                    if(cKey[V[(op & 0x0F00) >> 8]] == 0)
+                    if(!SDL_GetKeyboardState(NULL)[key_map[V[(op & 0x0F00) >> 8]]])
                         PC += 2;
 
                     PC += 2;
                     break;
                 default:
-                    fprintf(stderr, "Undefined opcode [0xE000]: 0x%X\n", op);
+                    opErr("Undefined opcode [0xE000]: 0x", op);
             }
             break;
         case 0xF000:
@@ -289,8 +294,16 @@ void emulateCycle(void)
                     PC += 2;
                     break;
                 case 0x000A:
-                    // Await key press to store in VX
+                {
+                    int i;
+                    for(i = 0; i < KEY_NUM; i++) {
+                        if(SDL_GetKeyboardState(NULL)[key_map[i]]) {
+                            V[(op & 0x0F00) >> 8] = i;
+                            PC += 2;
+                        }
+                    }
                     break;
+                }
                 case 0x0015:
                     dTimer = V[(op & 0x0F00) >> 8];
                     PC += 2;
@@ -304,7 +317,7 @@ void emulateCycle(void)
                     PC += 2;
                     break;
                 case 0x0029:
-                    // Set I to location of sprite character in VX
+                    I = V[(op & 0x0F00) >> 8] * 5;
                     PC += 2;
                     break;
                 case 0x0033:
@@ -338,12 +351,11 @@ void emulateCycle(void)
                     break;
                 }
                 default:
-                    fprintf(stderr, "Undefined opcode [0xF000]: 0x%X\n", op);
+                    opErr("Undefined opcode [0xF000]: 0x", op);
             }
             break;
         default:
-            fprintf(stderr, "Undefined opcode: 0x%X\n", op);
-            // Return error?
+            opErr("Undefined opcode: 0x", op);
     }
 
     if(dTimer > 0)
@@ -354,9 +366,4 @@ void emulateCycle(void)
             printf("BEEP!\n");
         --sTimer;
     }
-}
-
-void setKeys(void)
-{
-
 }

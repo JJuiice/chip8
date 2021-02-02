@@ -2,12 +2,12 @@ CC=x86_64-w64-mingw32-gcc
 INCLUDE_DIRS=-I.
 WIN_INCLUDE_DIRS=$(INCLUDE_DIRS) -I$(WIN_MINGW_INC) 
 LNX_INCLUDE_DIRS=$(INCLUDE_DIRS) -I/usr/include -I/usr/include/x86_64-linux-gnu
-CFLAGS=-g -O2 -pedantic -DLNX
+CFLAGS=-g -O2 -pedantic
 LFLAGS=-lm -lSDL2 -lSDL2main
 WIN_EXE=emulator.exe
 LNX_BIN=emulator.out
-DEPS=chip8.h
-OBJS=main.o chip8.o
+DEPS=chip8.h constants.h error_management.h
+OBJS=main.o chip8.o error_management.o
 
 .PHONY: all clean win lnx
 
@@ -18,7 +18,7 @@ win: LFLAGS+=-L$(WIN_MINGW_LIBS)
 win: $(WIN_EXE) 
 
 lnx: CC=gcc
-lnx: CFLAGS+=$(LNX_INCLUDE_DIRS)
+lnx: CFLAGS+=$(LNX_INCLUDE_DIRS) -DLNX
 lnx: $(LNX_BIN)
 
 clean:

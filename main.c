@@ -1,5 +1,6 @@
+#include "constants.h"
 #include "chip8.h"
-#include <string.h>
+#include "error_management.h"
 #include <math.h>
 #include <stdio.h>
 
@@ -8,11 +9,7 @@
 #define FPS 60
 #define MS_PER_FPS (1000 / FPS)
 
-typedef struct KeyMap
-{
-    SDL_Scancode key;
-    unsigned char *mapped_value;
-} KeyMap;
+#define MAX_FILE_LEN 256
 
 typedef struct Display
 {
@@ -21,34 +18,7 @@ typedef struct Display
     SDL_Texture *texture;
 } Display;
 
-void errQuit(const char *msg)
-{
-    fprintf(stderr, "%s\n", msg);
-    SDL_ClearError();
-    SDL_Quit();
-    exit(1);
-}
-
-void checkSDLError(int line, const char *msg)
-{
-	const char *error = SDL_GetError();
-	if (*error != '\0')
-	{
-        char *fullError;
-        char *sdlError;
-        snprintf(sdlError, 13 + strlen(error),"SDL Error: %s\n", error);
-		if (line != -1) {
-            int numOfDigits = floor(log10(abs((double) line)) + 1);
-			snprintf(fullError, strlen(sdlError) + 11 + numOfDigits, "%s + line: %i\n", sdlError, line);
-        } else {
-            fullError = sdlError;
-        }
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "%s", fullError);
-        errQuit(msg);
-	}
-}
-
-void setupGfx(Display *display, const char *game) {
+static void setupGfx(Display *display, const char *game) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
         errQuit("Unable to initialize SDL");
 
@@ -77,7 +47,7 @@ void setupGfx(Display *display, const char *game) {
     checkSDLError(__LINE__, "Error creating renderer");
 }
 
-void drawGfx(Display *display) {
+static void drawGfx(Display *display) {
     SDL_UpdateTexture(display->texture, NULL, gfx, GFX_WIDTH * sizeof(char));
     checkSDLError(__LINE__, "Error updating texture");
 
@@ -88,7 +58,7 @@ void drawGfx(Display *display) {
     checkSDLError(__LINE__, "Error copying texture to renderer");
 }
 
-void cleanGfx(Display *display) {
+static void cleanGfx(Display *display) {
     SDL_DestroyTexture(display->texture);
     checkSDLError(__LINE__, "Error destroying texture");
     
@@ -101,38 +71,22 @@ void cleanGfx(Display *display) {
     SDL_Quit();
 }
 
-void setupInput(KeyMap keyMap[KEY_NUM]) {
-    int error = 0;
-    const short valueLength = 5;
-    const SDL_Scancode keys[] = {
-        SDL_SCANCODE_X, SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3,
-        SDL_SCANCODE_Q, SDL_SCANCODE_W, SDL_SCANCODE_E, SDL_SCANCODE_A,
-        SDL_SCANCODE_S, SDL_SCANCODE_D, SDL_SCANCODE_Z, SDL_SCANCODE_C,
-        SDL_SCANCODE_4, SDL_SCANCODE_R, SDL_SCANCODE_F, SDL_SCANCODE_V
-    };
-
-    int i;
-    for(i = 0; i < KEY_NUM; i++) {
-        keyMap[i].key = keys[i];
-        memcpy(keyMap[i].mapped_value, &fontset[i*valueLength], valueLength);
-    }
-
-    checkSDLError(__LINE__, "Error mapping keyboard");
+static void askGameName(char name[MAX_FILE_LEN])
+{
+    printf("Enter name: ");
+    fgets(name, MAX_FILE_LEN, stdin);
 }
 
 int main(int argc, char **argv)
 {
-    KeyMap keyMap[KEY_NUM];
     Display display;
-
-    if(argc <= 1)
-        errQuit("No game file specified!");
+    char name[MAX_FILE_LEN];
 
     setupGfx(&display, argv[1]);
-    setupInput(keyMap);
 
     init();
-    loadGame(argv[1]);
+    askGameName(name);
+    loadGame(name);
 
     SDL_Event event;
     int run = 1;
