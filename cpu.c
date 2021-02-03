@@ -190,8 +190,8 @@ void emulateCycle(CPU *cpu)
 
                         gfx[gfxInx] ^= ~PIXEL_OFF;
 
-                        if (!cpu->dTimer)
-                            cpu->dTimer = 1;
+                        if (!cpu->dFlag)
+                            cpu->dFlag = 1;
                     }
                 }
             }
