@@ -1,11 +1,17 @@
 #include <stdio.h>
 #include "constants.h"
+#include "logging.h"
 
 #define QUIT_DELAY_MS 3000
 
-void errQuit(const char *msg)
+void logErr(const char *msg)
 {
     fprintf(stderr, "%s\n", msg);
+}
+
+void logQuit(const char *msg)
+{
+    logErr(msg);
     SDL_ClearError();
     SDL_Delay(QUIT_DELAY_MS);
     SDL_Quit();
@@ -26,6 +32,6 @@ void checkSDLError(int line, const char *msg)
             fullError = sdlError;
         
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "%s", fullError);
-        errQuit(msg);
+        logQuit(msg);
 	}
 }
