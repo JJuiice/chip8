@@ -18,9 +18,9 @@ typedef struct Display {
     SDL_Texture *texture;
 } Display;
 
-void setupGfx(Display*, const char*);
-void drawGfx(Display*);
-void cleanGfx(Display*);
+void setupGfx(const char*);
+void drawGfx();
+void cleanGfx();
 
 extern uint32_t gfx[GFX_RESOULTION];
 extern const uint8_t fontset[80];

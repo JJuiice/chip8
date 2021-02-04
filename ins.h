@@ -3,14 +3,18 @@
 #include <stdint.h>
 #include "cpu.h"
 
-void jmp(CPU *);
-void call(CPU *);
-void setValUInt8(uint16_t, uint8_t*, uint8_t);
-void setValUInt16(uint16_t, uint16_t*, uint16_t);
-void skipNextIns(CPU *, uint8_t);
-void addNoCarry(CPU *);
-void addVXWithCarry(CPU *, uint8_t);
-void dispClear(uint16_t, uint8_t*);
-void ret(CPU *);
+void jmp();
+void call();
+void draw();
+void storeKeyPInVX();
+void bcdVX();
+void sbVXInVFLSB(uint8_t sb);
+void regMemTrans(uintptr_t *dst, uintptr_t *src);
+void set(uintptr_t *lVal, const uint16_t rVal);
+void skipNextIns(uint8_t cond);
+void addNoCarry(uintptr_t *lVal, const uint16_t rVal);
+void addVXWithOverflow(uint8_t rVal, const uint8_t cond);
+void dispClear();
+void ret();
 
 #endif

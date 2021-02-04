@@ -14,8 +14,8 @@ union Opcode
     struct
     {
         uint8_t n  : 4;
-        uint8_t x  : 4;
         uint8_t y  : 4;
+        uint8_t x  : 4;
         uint8_t op : 4;
     };
     struct
@@ -46,8 +46,10 @@ typedef struct CPU
     uint8_t dFlag;
 } CPU;
 
-void init(CPU *);
-void loadGame(CPU *, const char*);
-void emulateCycle(CPU *);
+void init();
+void loadGame(const char*);
+void emulateCycle();
+
+extern CPU cpu;
 
 #endif

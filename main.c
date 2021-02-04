@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define FPS 60
+#define FPS 10 // 60
 #define MS_PER_FPS (1000 / FPS)
 
 #define MAX_FILE_LEN 256
@@ -18,27 +18,29 @@ static void askGameName(char name[MAX_FILE_LEN])
 
 int main(int argc, char **argv)
 {
-    Display display;
-    CPU cpu;
+
+    setupGfx("Chip8");
+
+    init();
+
+    #ifndef NDEBUG
+    char name[] = "Maze [David Winter, 199x].ch8";
+    #else
     char name[MAX_FILE_LEN];
-
-    setupGfx(&display, "Chip8");
-
-    init(&cpu);
-
     askGameName(name);
     name[strlen(name) - 1] = '\0';
+    #endif
 
-    loadGame(&cpu, name);
+    loadGame(name);
 
     SDL_Event event;
     uint8_t run = 1;
     while(run) {
         uint32_t startTick = SDL_GetTicks();
 
-        emulateCycle(&cpu);
+        emulateCycle();
         if(cpu.dFlag) {
-            drawGfx(&display);
+            drawGfx();
             cpu.dFlag = 0;
         }
         
@@ -54,6 +56,6 @@ int main(int argc, char **argv)
         }
     }
 
-    cleanGfx(&display);
+    cleanGfx();
     exit(0);
 }
