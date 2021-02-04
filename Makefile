@@ -2,7 +2,8 @@ CC=x86_64-w64-mingw32-gcc
 INCLUDE_DIRS=-I.
 WIN_INCLUDE_DIRS=$(INCLUDE_DIRS) -I$(WIN_MINGW_INC) 
 LNX_INCLUDE_DIRS=$(INCLUDE_DIRS) -I/usr/include -I/usr/include/x86_64-linux-gnu
-CFLAGS=-g -O2 -pedantic
+# O1-O3 and Og optimization messes with emulation
+CFLAGS=-g -pedantic -std=c11
 LFLAGS=-lm -lSDL2 -lSDL2main
 WIN_EXE=emulator.exe
 LNX_BIN=emulator.out

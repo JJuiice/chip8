@@ -6,29 +6,31 @@
 static void logOp(const char *msg)
 {
     #ifndef NDEBUG
-    char errMsg[2 + sizeof(cpu.opcode.ins) + 3 + strlen(msg) + 2];
-    sprintf(errMsg, "0x%X - %s\n", cpu.opcode.ins, msg);
+    char errMsg[500];
+    //char errMsg[2 + sizeof(cpu.opcode.ins) + 8 + sizeof(cpu.PC) + 4 + strlen(msg) + 2];
+    sprintf(errMsg, "0x%X (PC: 0x%X) - %s\n", cpu.opcode.ins, cpu.PC, msg);
     logErr(errMsg);
     #endif
 }
 
-void jmp()
+void jmp(const uint16_t addr)
 {  
-    logOp("0x1NNN: JMP NNN");
-    cpu.PC = cpu.opcode.addr;
+    logOp("0x1NNN: JMP NNN"
+          "\t\t     0xBNNN: PC = V0 + NNN\n");
+    cpu.PC = addr;
     cpu.PC -= 2;
 }
 
-void call()
+void call(void)
 {
     logOp("0x2NNN: Call NNN");
     cpu.stack[cpu.SP] = cpu.PC;
-    ++cpu.SP;
+    cpu.SP++;
     cpu.PC = cpu.opcode.addr;
     cpu.PC -= 2;
 }
 
-void storeKeyPInVX()
+void storeKeyPInVX(void)
 {
     logOp("0xFX0A: Wait for keypress to store in VX");
 
@@ -45,7 +47,7 @@ void storeKeyPInVX()
         cpu.PC -= 2;
 }
 
-void draw()
+void draw(void)
 {
     logOp("DXYN: draw(VX, VY, N)");
     cpu.V[0xF] = 0;
@@ -70,7 +72,7 @@ void draw()
     }
 }
 
-void bcdVX()
+void bcdVX(void)
 {
     logOp("0xFX33: Store BCD of VX");
     cpu.mem[cpu.I]     = cpu.V[cpu.opcode.x] / 100;
@@ -81,7 +83,7 @@ void bcdVX()
 void sbVXInVFLSB(uint8_t sb)
 {
     logOp("0x8XY6: Store VX LSB in VF LSB, then VX>>=1"
-          "\t 0x8XYE: Store VX MSB in VF LSB, then VX<<=1");
+          "\t\t     0x8XYE: Store VX MSB in VF LSB, then VX<<=1");
 
     cpu.V[0xF] = cpu.V[cpu.opcode.x] & sb;
     if(sb == LSB8_MASK) {
@@ -93,58 +95,80 @@ void sbVXInVFLSB(uint8_t sb)
     }
 }
 
-void regMemTrans(uintptr_t *dst, uintptr_t *src)
+void regMemTrans(uint8_t *dst, const uint8_t *src, const uint16_t srcSize)
 {
     logOp("0xFX55: Store V0 to VX in memory starting at address I\n"
-          "\t 0xFX65: Fill V0 to VX in from memory values starting at address I");
-
-    uint16_t inx = cpu.I;
-    
-    for(int i = 0; i <= cpu.V[cpu.opcode.x]; i++)
-        dst[i] = src[inx++];
+          "\t\t     0xFX65: Fill V0 to VX in from memory values starting at address I");
+ 
+    if (srcSize == MEM_SIZE)
+        memcpy(dst, &src[cpu.I], sizeof(uint8_t) * srcSize);
+    else
+        memcpy(&dst[cpu.I], src, sizeof(uint8_t) * srcSize);
 }
 
-void set(uintptr_t *lVal, const uint16_t rVal)
+void setReg(const uint8_t reg, const uint8_t val)
 {
     logOp("0x6XNN: VX = NN\n"
-          "\t 0x8XY0: VX = VY\n"
-          "\t 0x8XY1: VX = VX | VY\n"
-          "\t 0x8XY2: VX = VX & VY\n"
-          "\t 0x8XY3: VX = VX ^ VY\n"
-          "\t 0xANNN: I = NNN\n"
-          "\t 0xBNNN: PC=V0+NNN\n"
-          "\t 0xCXNN: VX=rand()&NN\n"
-          "\t 0xFX07: VX = dTimer\n"
-          "\t 0xFX15: dTimer = VX\n"
-          "\t 0xFX18: sTimer = VX\n"
-          "\t 0xFX29E: I = sprite_addr[VX]");
-    *lVal = rVal;
+          "\t\t     0x8XY0: VX = VY\n"
+          "\t\t     0x8XY1: VX = VX | VY\n"
+          "\t\t     0x8XY2: VX = VX & VY\n"
+          "\t\t     0x8XY3: VX = VX ^ VY\n"
+          "\t\t     0xCXNN: VX = rand() & NN\n"
+          "\t\t     0xFX07: VX = dTimer");
+
+    cpu.V[reg] = val;
+}
+
+void setI(const uint16_t val)
+{
+    logOp("0xANNN: I = NNN\n"
+          "\t\t     0xFX29E: I = sprite_addr[VX]");
+
+    cpu.I = val;
+}
+
+void setTimer(const uint8_t timer, const uint8_t delay)
+{
+    logOp("0xFX15: dTimer = VX\n"
+          "\t\t     0xFX18: sTimer = VX");
+
+
+    if (timer == DTIMER)
+        cpu.dTimer = delay;
+    else
+        cpu.sTimer = delay;
 }
 
 void skipNextIns(uint8_t cond)
 {
     logOp("0x3XNN: Skip next instruction if VX==NN\n"
-          "\t 0x4XNN: Skip next instruction if VX!=NN\n"
-          "\t 0x5XY0: Skip next instruction if VX==VY\n"
-          "\t 0x9XYN: Skip next instruction if VX!=VY\n"
-          "\t 0xEX93: Skip next instruction if key()==VX\n"
-          "\t 0xEXA1: Skip next instruction if key()!=VX");
+          "\t\t     0x4XNN: Skip next instruction if VX!=NN\n"
+          "\t\t     0x5XY0: Skip next instruction if VX==VY\n"
+          "\t\t     0x9XYN: Skip next instruction if VX!=VY\n"
+          "\t\t     0xEX93: Skip next instruction if key()==VX\n"
+          "\t\t     0xEXA1: Skip next instruction if key()!=VX");
+
     if(cond)
         cpu.PC += 2;
 }
 
-void addNoCarry(uintptr_t *lVal, const uint16_t rVal)
+void addNoCarryVX(const uint8_t rVal)
 {
-    logOp("0x7XNN: VX += NN (No Carry)\n"
-          "\t 0xFX1E: I += VX (No Carry)");
-    *lVal += rVal;
+    logOp("0x7XNN: VX += NN (No Carry)");
+    cpu.V[cpu.opcode.x] += rVal;
+}
+
+void addNoCarryI(const uint16_t rVal)
+{
+    logOp("0xFX1E: I += VX (No Carry)");
+    cpu.I += rVal;
 }
 
 void addVXWithOverflow(uint8_t rVal, const uint8_t cond)
 {
     logOp("0x8XY4: VX += VY (With VF Carry)\n"
-          "\t 0x8XY5: VX -= VY (With VF Borrow)\n"
-          "\t 0x8XY7: VX=VY-VX (with VF carry)");
+          "\t\t     0x8XY5: VX -= VY (With VF Borrow)\n"
+          "\t\t     0x8XY7: VX=VY-VX (with VF carry)");
     if(cond)
         cpu.V[0xF] = 1;
     else

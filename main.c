@@ -1,3 +1,5 @@
+#define NDEBUG
+
 #include "constants.h"
 #include "cpu.h"
 #include "gfx.h"
@@ -5,7 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define FPS 10 // 60
+#define FPS 60
 #define MS_PER_FPS (1000 / FPS)
 
 #define MAX_FILE_LEN 256

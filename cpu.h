@@ -8,6 +8,9 @@
 #define MEM_SIZE 4096
 #define STACK_SIZE 16
 
+#define STIMER 2 
+#define DTIMER 4
+
 union Opcode
 {
     uint16_t ins;

@@ -75,10 +75,10 @@ void emulateCycle()
 {
     // Fetch
     cpu.opcode.ins = cpu.mem[cpu.PC] << 8 | cpu.mem[cpu.PC + 1];
-    uintptr_t *vx = (uintptr_t *)(void *) &cpu.V[cpu.opcode.x];
-    uint8_t *vy = &cpu.V[cpu.opcode.y];
+    uint8_t vx = cpu.V[cpu.opcode.x];
+    uint8_t vy = cpu.V[cpu.opcode.y];
 
-    fprintf(stderr, "PC: 0x%X, I: 0x%X\n" , cpu.PC, cpu.I);
+    fprintf(stderr, "I: 0x%X\n" , cpu.I);
 
     // Decode
     switch(cpu.opcode.op)
@@ -94,56 +94,56 @@ void emulateCycle()
             }
             break;
         }
-        case 0x1: jmp(&cpu); break;
-        case 0x2: call(&cpu); break;
-        case 0x3: skipNextIns(*vx == cpu.opcode.nn); break;
-        case 0x4: skipNextIns(*vx != cpu.opcode.nn); break;
-        case 0x5: skipNextIns(*vx == *vy); break;
-        case 0x6: set(vx, cpu.opcode.nn); break;
-        case 0x7: addNoCarry(vx, cpu.opcode.nn); break;
+        case 0x1: jmp(cpu.opcode.addr); break;
+        case 0x2: call(); break;
+        case 0x3: skipNextIns(vx == cpu.opcode.nn); break;
+        case 0x4: skipNextIns(vx != cpu.opcode.nn); break;
+        case 0x5: skipNextIns(vx == vy); break;
+        case 0x6: setReg(cpu.opcode.x, cpu.opcode.nn); break;
+        case 0x7: addNoCarryVX(cpu.opcode.nn); break;
         case 0x8:
         {
             switch(cpu.opcode.n)
             {
-                case 0x0: set(vx, *vy); break;
-                case 0x1: set(vx, *vx | *vy); break;
-                case 0x2: set(vx, *vx & *vy); break;
-                case 0x3: set(vx, *vx ^ *vy); break;
-                case 0x4: addVXWithOverflow(*vy, *vy > (0xFF - *vx)); break;
-                case 0x5: addVXWithOverflow(-(*vy), *vy > *vx); break;
+                case 0x0: setReg(cpu.opcode.x, vy); break;
+                case 0x1: setReg(cpu.opcode.x, vx | vy); break;
+                case 0x2: setReg(cpu.opcode.x, vx & vy); break;
+                case 0x3: setReg(cpu.opcode.x, vx ^ vy); break;
+                case 0x4: addVXWithOverflow(vy, vy > (0xFF - vx)); break;
+                case 0x5: addVXWithOverflow(-vy, vy > vx); break;
                 case 0x6: sbVXInVFLSB(LSB8_MASK); break;
-                case 0x7: addVXWithOverflow(*vy - *vx, *vx > *vy); break;
+                case 0x7: addVXWithOverflow(vy - vx, vx > vy); break;
                 case 0xE: sbVXInVFLSB(MSB8_MASK); break;
                 default:
                     logOpQuit();
             }
             break;
         }
-        case 0x9: fprintf(stderr,"*vx: %d, V[x]: %d, *vy: %d, V[y]: %d, *vx != *vy: %d\n", *vx, cpu.V[cpu.opcode.x], *vy, cpu.V[cpu.opcode.y], (*vx != *vy)); skipNextIns(*vx != *vy); break;
-        case 0xA: set((uintptr_t *)(void *) &cpu.I, cpu.opcode.addr); break;
-        case 0xB: set((uintptr_t *)(void *) &cpu.PC, cpu.V[0]); cpu.PC -= 2; break;
-        case 0xC: set(vx, (rand() % 0xFF) & cpu.opcode.nn); break;
+        case 0x9: skipNextIns(vx != vy); break;
+        case 0xA: setI(cpu.opcode.addr); break;
+        case 0xB: jmp(cpu.V[0] + cpu.opcode.addr); cpu.PC -= 2; break;
+        case 0xC: setReg(cpu.opcode.x, (rand() % 0xFF) & cpu.opcode.nn); break;
         case 0xD: draw(); break;
         case 0xE:
             switch(cpu.opcode.nn)
             {
-                case 0x9E: skipNextIns(SDL_GetKeyboardState(NULL)[key_map[*vx]]); break;
-                case 0xA1: skipNextIns(~SDL_GetKeyboardState(NULL)[key_map[*vx]]); break;
+                case 0x9E: skipNextIns(SDL_GetKeyboardState(NULL)[key_map[vx]]); break;
+                case 0xA1: skipNextIns(~SDL_GetKeyboardState(NULL)[key_map[vx]]); break;
                 default:
                     logOpQuit();
             }
             break;
         case 0xF:
             switch(cpu.opcode.nn) {
-                case 0x07: set(vx, cpu.dTimer); break;
+                case 0x07: setReg(cpu.opcode.x, cpu.dTimer); break;
                 case 0x0A: storeKeyPInVX();
-                case 0x15: set((uintptr_t *)(void *) &cpu.dTimer, *vx); break;
-                case 0x18: set((uintptr_t *)(void *) &cpu.sTimer, *vx); break;
-                case 0x1E: addNoCarry((uintptr_t *)(void *) &cpu.I, *vx); break;
-                case 0x29: set((uintptr_t *)(void *) &cpu.I, *vx * 5); break;
+                case 0x15: setTimer(DTIMER, vx); break;
+                case 0x18: setTimer(STIMER, vx); break;
+                case 0x1E: addNoCarryI(vx); break;
+                case 0x29: setI(vx * 5); break;
                 case 0x33: bcdVX(); break;
-                case 0x55: regMemTrans((uintptr_t *)(void *) cpu.mem, (uintptr_t *)(void *) cpu.V); break;
-                case 0x65: regMemTrans((uintptr_t *)(void *)cpu.V, (uintptr_t *)(void *)cpu.mem); break;
+                case 0x55: regMemTrans(cpu.mem, cpu.V, 16); break;
+                case 0x65: regMemTrans(cpu.V, cpu.mem, MEM_SIZE); break;
                 default:
                     logOpQuit();
             }
@@ -153,13 +153,13 @@ void emulateCycle()
     }
 
     if(cpu.dTimer > 0)
-        --cpu.dTimer;
+        cpu.dTimer--;
 
     if(cpu.sTimer > 0) {
-        if(cpu.sTimer == 1)
+        if(cpu.sTimer-- == 1)
             printf("BEEP!\n");
-        --cpu.sTimer;
     }
 
+    fprintf(stderr, "dTimer = 0x%X, V[x] = 0x%X, V[D] = 0x%X\n", cpu.dTimer, cpu.V[cpu.opcode.x], cpu.V[0xD]);
     cpu.PC += 2;
 }
