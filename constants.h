@@ -1,6 +1,7 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 #include "gfx.h"
+#define NDEBUG
 
 #define LSB8_MASK 0x01
 #define MSB8_MASK 0x80

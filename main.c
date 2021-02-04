@@ -1,5 +1,3 @@
-#define NDEBUG
-
 #include "constants.h"
 #include "cpu.h"
 #include "gfx.h"
@@ -26,7 +24,7 @@ int main(int argc, char **argv)
     init();
 
     #ifndef NDEBUG
-    char name[] = "Maze [David Winter, 199x].ch8";
+    char name[] ="Sierpinski [Sergey Naydenov, 2010].ch8";
     #else
     char name[MAX_FILE_LEN];
     askGameName(name);
