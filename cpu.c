@@ -96,11 +96,11 @@ void emulateCycle()
         }
         case 0x1: jmp(cpu.opcode.addr, "0x1NNN: JMP NNN"); break;
         case 0x2: call(); break;
-        case 0x3: skipNextIns(vx == cpu.opcode.nn, "0x3XNN: Skip next instruction if VX==NN"); break;
-        case 0x4: skipNextIns(vx != cpu.opcode.nn, "0x4XNN: Skip next instruction if VX!=NN"); break;
+        case 0x3: skipNextIns(vx == cpu.opcode.kk, "0x3XNN: Skip next instruction if VX==NN"); break;
+        case 0x4: skipNextIns(vx != cpu.opcode.kk, "0x4XNN: Skip next instruction if VX!=NN"); break;
         case 0x5: skipNextIns(vx == vy, "0x5XY0: Skip next instruction if VX==VY"); break;
-        case 0x6: setReg(cpu.opcode.x, cpu.opcode.nn, "0x6XNN: VX = NN"); break;
-        case 0x7: fprintf(stderr, "vx + nn: %d\n", vx, vx + cpu.opcode.nn);setReg(cpu.opcode.x, vx + cpu.opcode.nn, "0x7XNN: VX += NN (No Carry)"); break;
+        case 0x6: setReg(cpu.opcode.x, cpu.opcode.kk, "0x6XNN: VX = NN"); break;
+        case 0x7: setReg(cpu.opcode.x, vx + cpu.opcode.kk, "0x7XNN: VX += NN (No Carry)"); break;
         case 0x8:
         {
             switch(cpu.opcode.n)
@@ -122,10 +122,10 @@ void emulateCycle()
         case 0x9: skipNextIns(vx != vy, "0x9XYN: Skip next instruction if VX!=VY"); break;
         case 0xA: setI(cpu.opcode.addr, "0xANNN: I = NNN"); break;
         case 0xB: jmp(cpu.V[0] + cpu.opcode.addr, "0xBNNN: PC = V0 + NNN"); cpu.PC -= 2; break;
-        case 0xC: setReg(cpu.opcode.x, (rand() % 0xFF) & cpu.opcode.nn, "0xCXNN: VX = rand() & NNN"); break;
+        case 0xC: setReg(cpu.opcode.x, (rand() % 0xFF) & cpu.opcode.kk, "0xCXNN: VX = rand() & NNN"); break;
         case 0xD: draw(); break;
         case 0xE:
-            switch(cpu.opcode.nn)
+            switch(cpu.opcode.kk)
             {
                 case 0x9E: skipNextIns(SDL_GetKeyboardState(NULL)[key_map[vx]], "0xEX93: Skip next instruction if key()==VX"); break;
                 case 0xA1: skipNextIns(~SDL_GetKeyboardState(NULL)[key_map[vx]], "0xEXA1: Skip next instruction if key()!=VX"); break;
@@ -134,7 +134,7 @@ void emulateCycle()
             }
             break;
         case 0xF:
-            switch(cpu.opcode.nn) {
+            switch(cpu.opcode.kk) {
                 case 0x07: setReg(cpu.opcode.x, cpu.dTimer, "0xFX07: VX = dTimer"); break;
                 case 0x0A: storeKeyPInVX(); break;
                 case 0x15: setTimer(DTIMER, vx, "0xFX15: dTimer = VX"); break;
@@ -160,6 +160,6 @@ void emulateCycle()
             printf("BEEP!\n");
     }
 
-    fprintf(stderr, "dTimer = 0x%X, V[0x%X] = 0x%X, V[6]=0x%X\n\n", cpu.dTimer, cpu.opcode.x, cpu.V[cpu.opcode.x], cpu.V[0x6]);
+    // fprintf(stderr, "dTimer = 0x%X, V[0x%X] = 0x%X, V[6]=0x%X\n\n", cpu.dTimer, cpu.opcode.x, cpu.V[cpu.opcode.x], cpu.V[0x6]);
     cpu.PC += 2;
 }

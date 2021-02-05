@@ -23,7 +23,7 @@ union Opcode
     };
     struct
     {
-        uint8_t nn : 8;
+        uint8_t kk : 8;
     };
     struct
     {
