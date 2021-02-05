@@ -8,28 +8,36 @@
 #define FPS 60
 #define MS_PER_FPS (1000 / FPS)
 
-#define MAX_FILE_LEN 256
+#define MAX_FILE_LEN 255
+#define C8_DELIM_LEN_OFFSET -4 
 
-static void askGameName(char name[MAX_FILE_LEN])
+static void getGameName(char name[MAX_FILE_LEN])
 {
     printf("Enter name: ");
     fgets(name, MAX_FILE_LEN, stdin);
+
+    const short nameLength = strlen(name);
+    if (nameLength <= 0 || nameLength > MAX_FILE_LEN ) 
+        logQuit("Invalid file name");
+    
+    name[strlen(name) - 1] = 0;
 }
 
 int main(int argc, char **argv)
 {
-
-    setupGfx("Chip8");
-
-    init();
+    char name[MAX_FILE_LEN];
 
     #ifndef NDEBUG
-    char name[] ="Sierpinski [Sergey Naydenov, 2010].ch8";
+    const char *fName = "Delay Timer Test [Matthew Mikolay, 2010].ch8"; // "delay_timer_test.ch8"; // "test_opcode.ch8"; 
+    sprintf(name, "%s", fName);
     #else
-    char name[MAX_FILE_LEN];
-    askGameName(name);
-    name[strlen(name) - 1] = '\0';
+    getGameName(name);
     #endif
+    const short winNameLen = strlen(name) + C8_DELIM_LEN_OFFSET;
+
+    setupGfx(name, winNameLen);
+
+    init();
 
     loadGame(name);
 

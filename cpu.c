@@ -100,7 +100,7 @@ void emulateCycle()
         case 0x4: skipNextIns(vx != cpu.opcode.nn, "0x4XNN: Skip next instruction if VX!=NN"); break;
         case 0x5: skipNextIns(vx == vy, "0x5XY0: Skip next instruction if VX==VY"); break;
         case 0x6: setReg(cpu.opcode.x, cpu.opcode.nn, "0x6XNN: VX = NN"); break;
-        case 0x7: setReg(cpu.opcode.x, vx + cpu.opcode.nn, "0x7XNN: VX += NN (No Carry)"); break;
+        case 0x7: fprintf(stderr, "vx + nn: %d\n", vx, vx + cpu.opcode.nn);setReg(cpu.opcode.x, vx + cpu.opcode.nn, "0x7XNN: VX += NN (No Carry)"); break;
         case 0x8:
         {
             switch(cpu.opcode.n)
@@ -109,11 +109,11 @@ void emulateCycle()
                 case 0x1: setReg(cpu.opcode.x, vx | vy, "0x8XY0: VX = VX | VY"); break;
                 case 0x2: setReg(cpu.opcode.x, vx & vy, "0x8XY2: VX = VX & VY"); break;
                 case 0x3: setReg(cpu.opcode.x, vx ^ vy, "0x8XY3: VX = VX ^ VY"); break;
-                case 0x4: addVXWithOverflow(vy, vy > (0xFF - vx), "0x8XY4: VX += VY (With VF Carry)"); break;
-                case 0x5: addVXWithOverflow(-vy, vy > vx, "0x8XY5: VX -= VY (With VF Borrow)"); break;
-                case 0x6: sbVXInVFLSB(LSB8_MASK, "0x8XY6: Store VX LSB in VF LSB, then VX>>=1"); break;
-                case 0x7: addVXWithOverflow(vy - vx, vx > vy, "0x8XY7: VX=VY-VX (with VF Carry)"); break;
-                case 0xE: sbVXInVFLSB(MSB8_MASK, "0x8XYE: Store VX MSB in VF LSB, then VX<<=1"); break;
+                case 0x4: addXRegWithOverflow(vy, (vy + vx) > 0xFF, "0x8XY4: VX += VY (With VF Carry)"); break;
+                case 0x5: addXRegWithOverflow(-vy, vy > vx, "0x8XY5: VX -= VY (With VF Borrow)"); break;
+                case 0x6: sbXRegInOFLSB(LSB8_MASK, "0x8XY6: Store VX LSB in VF LSB, then VX>>=1"); break;
+                case 0x7: addXRegWithOverflow(vy - vx, vx > vy, "0x8XY7: VX=VY-VX (with VF Carry)"); break;
+                case 0xE: sbXRegInOFLSB(MSB8_MASK, "0x8XYE: Store VX MSB in VF LSB, then VX<<=1"); break;
                 default:
                     logOpQuit();
             }
@@ -140,8 +140,8 @@ void emulateCycle()
                 case 0x15: setTimer(DTIMER, vx, "0xFX15: dTimer = VX"); break;
                 case 0x18: setTimer(STIMER, vx, "0xFX18: sTimer = VX"); break;
                 case 0x1E: setI(cpu.I + vx, "0xFX1E: I += VX (No Carry)"); break;
-                case 0x29: setI(vx * 5, "0xFX29E: I = sprite_addr[VX]"); break;
-                case 0x33: bcdVX(); break;
+                case 0x29: setI(vx * 5, "0xFX29: I = sprite_addr[VX]"); break;
+                case 0x33: bcdXReg(); break;
                 case 0x55: regMemTrans(cpu.mem, cpu.V, 16, "0xFX55: Store V0 to VX in memory starting at address I"); break;
                 case 0x65: regMemTrans(cpu.V, cpu.mem, MEM_SIZE, "0xFX65: Fill V0 to VX in from memory values starting at address I"); break;
                 default:
@@ -160,6 +160,6 @@ void emulateCycle()
             printf("BEEP!\n");
     }
 
-    // fprintf(stderr, "dTimer = 0x%X, V[x] = 0x%X, V[D] = 0x%X\n\n", cpu.dTimer, cpu.V[cpu.opcode.x], cpu.V[0xD]);
+    fprintf(stderr, "dTimer = 0x%X, V[0x%X] = 0x%X, V[6]=0x%X\n\n", cpu.dTimer, cpu.opcode.x, cpu.V[cpu.opcode.x], cpu.V[0x6]);
     cpu.PC += 2;
 }

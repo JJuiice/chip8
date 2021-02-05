@@ -1,6 +1,7 @@
 #include "gfx.h"
 #include "constants.h"
 #include "logging.h"
+#include <stdio.h>
 
 static Display display;
 
@@ -25,12 +26,16 @@ const uint8_t fontset[80] =
     0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
 
-void setupGfx(const char *game) {
+void setupGfx(const char *name, const short winNameLen) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
         logQuit("Unable to initialize SDL");
 
+    char winName[winNameLen + 1];
+    memcpy(winName, name, winNameLen);
+    winName[winNameLen] = 0;
+
     display.window = SDL_CreateWindow(
-                    game,
+                    winName,
                     SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                     GFX_WIDTH * SCREEN_SCALE, GFX_HEIGHT * SCREEN_SCALE,
                     SDL_WINDOW_SHOWN
