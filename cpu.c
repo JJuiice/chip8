@@ -155,8 +155,8 @@ void emulateCycle()
         cpu.dTimer--;
 
     if(cpu.sTimer > 0) {
-        if(cpu.sTimer-- == 1)
-            printf("BEEP!\n");
+        printf("\nBEEP!\n");
+        printf("\a\n");
     }
 
     cpu.PC += 2;
