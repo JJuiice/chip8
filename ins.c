@@ -22,11 +22,8 @@ void jmp(const uint16_t addr, const char *logMsg)
 
 void call(void)
 {
-    cpu.stack[cpu.SP] = cpu.PC;
-    cpu.SP++;
+    cpu.stack[cpu.SP++] = cpu.PC;
     jmp(cpu.opcode.addr, "0x2NNN: Call NNN");
-    cpu.PC = cpu.opcode.addr;
-    cpu.PC -= 2;
 }
 
 void storeKeyPInVX(void)
@@ -80,10 +77,12 @@ void sbXRegInOFLSB(uint8_t sb, const char *logMsg)
 {
     logOp(logMsg);
 
-    cpu.V[0xF] = cpu.V[cpu.opcode.x] & sb;
+    const uint8_t oF = cpu.V[cpu.opcode.x] & sb;
     if(sb == LSB8_MASK) {
+        cpu.V[0xF] = oF;
         cpu.V[cpu.opcode.x] >>= 1;
     } else if(sb == MSB8_MASK) {
+        cpu.V[0xF] = oF >> 7;
         cpu.V[cpu.opcode.x] <<= 1;
     } else {
         logQuit("Inappropriate Bit Mask");

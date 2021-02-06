@@ -78,7 +78,6 @@ void emulateCycle()
     uint8_t vx = cpu.V[cpu.opcode.x];
     uint8_t vy = cpu.V[cpu.opcode.y];
 
-    // fprintf(stderr, "I: 0x%X\n" , cpu.I);
 
     // Decode
     switch(cpu.opcode.op)
@@ -110,9 +109,9 @@ void emulateCycle()
                 case 0x2: setReg(cpu.opcode.x, vx & vy, "0x8XY2: VX = VX & VY"); break;
                 case 0x3: setReg(cpu.opcode.x, vx ^ vy, "0x8XY3: VX = VX ^ VY"); break;
                 case 0x4: addXRegWithOverflow(vy, (vy + vx) > 0xFF, "0x8XY4: VX += VY (With VF Carry)"); break;
-                case 0x5: addXRegWithOverflow(-vy, vy > vx, "0x8XY5: VX -= VY (With VF Borrow)"); break;
+                case 0x5: addXRegWithOverflow(-vy, vx > vy, "0x8XY5: VX -= VY (With VF Borrow)"); break;
                 case 0x6: sbXRegInOFLSB(LSB8_MASK, "0x8XY6: Store VX LSB in VF LSB, then VX>>=1"); break;
-                case 0x7: addXRegWithOverflow(vy - vx, vx > vy, "0x8XY7: VX=VY-VX (with VF Carry)"); break;
+                case 0x7: addXRegWithOverflow(vy - vx, vx < vy, "0x8XY7: VX=VY-VX (with VF Borrow)"); break;
                 case 0xE: sbXRegInOFLSB(MSB8_MASK, "0x8XYE: Store VX MSB in VF LSB, then VX<<=1"); break;
                 default:
                     logOpQuit();
@@ -160,6 +159,8 @@ void emulateCycle()
             printf("BEEP!\n");
     }
 
-    // fprintf(stderr, "dTimer = 0x%X, V[0x%X] = 0x%X, V[6]=0x%X\n\n", cpu.dTimer, cpu.opcode.x, cpu.V[cpu.opcode.x], cpu.V[0x6]);
     cpu.PC += 2;
-}
+    #ifndef NDEBUG
+    dumpRegAndPointerInfo();
+    #endif 
+} 

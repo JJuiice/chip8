@@ -28,7 +28,7 @@ int main(int argc, char **argv)
     char name[MAX_FILE_LEN];
 
     #ifndef NDEBUG
-    const char *fName = "Delay Timer Test [Matthew Mikolay, 2010].ch8"; // "delay_timer_test.ch8"; // "test_opcode.ch8"; 
+    const char *fName = "Sierpinski [Sergey Naydenov, 2010].ch8"; // "delay_timer_test.ch8"; // "test_opcode.ch8"; 
     sprintf(name, "%s", fName);
     #else
     getGameName(name);

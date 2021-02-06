@@ -5,5 +5,6 @@
 void logErr(const char*);
 void logQuit(const char*);
 void checkSDLError(int, const char*);
+void dumpRegAndPointerInfo();
 
 #endif

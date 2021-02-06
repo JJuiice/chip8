@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "constants.h"
 #include "logging.h"
+#include "cpu.h"
 
 #define QUIT_DELAY_MS 3000
 
@@ -34,4 +35,17 @@ void checkSDLError(int line, const char *msg)
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "%s", fullError);
         logQuit(msg);
 	}
+}
+
+void dumpRegAndPointerInfo()
+{
+    fprintf(stderr, "\nPC: 0x%X\nI: 0x%X\nStack: ", cpu.PC, cpu.I);
+    for(int i = 0; i < cpu.SP; i++)
+        fprintf(stderr, "0x%X", cpu.stack[i]);
+
+    fprintf(stderr, "\nDelay Timer: %d\nSound Timer: %d\n", cpu.dTimer, cpu.sTimer);
+
+    for(int i = 0; i < 16; i++)
+        fprintf(stderr, "V[0x%X] = 0x%X (%d)\n", i, cpu.V[i], cpu.V[i]);
+    fprintf(stderr, "\n");
 }
