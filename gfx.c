@@ -1,5 +1,4 @@
 #include "gfx.h"
-#include "constants.h"
 #include "logging.h"
 #include <stdio.h>
 
@@ -61,7 +60,7 @@ void setupGfx(const char *name, const short winNameLen) {
 
 void drawGfx() {
     #ifndef NDEBUG
-    logErr("Drawing Graphics");
+    logMsg("Drawing Graphics\n");
     #endif
 
     SDL_UpdateTexture(display.texture, NULL, gfx, GFX_WIDTH * sizeof(uint32_t));

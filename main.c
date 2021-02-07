@@ -5,8 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define FPS 60
-#define MS_PER_FPS (1000 / FPS)
+#define FPS 60 
 
 #define MAX_FILE_LEN 255
 #define C8_DELIM_LEN_OFFSET -4 
@@ -25,10 +24,11 @@ static void getGameName(char name[MAX_FILE_LEN])
 
 int main(int argc, char **argv)
 {
+    const double MS_PER_FRAME = 1000.0 / FPS;
     char name[MAX_FILE_LEN];
 
     #ifndef NDEBUG
-    const char *fName = "Sierpinski [Sergey Naydenov, 2010].ch8"; // "delay_timer_test.ch8"; // "test_opcode.ch8"; 
+    const char *fName = "Clock Program [Bill Fisher, 1981].ch8"; // "delay_timer_test.ch8"; // "test_opcode.ch8"; 
     sprintf(name, "%s", fName);
     #else
     getGameName(name);
@@ -53,8 +53,8 @@ int main(int argc, char **argv)
         }
         
         uint32_t emulationSpeed = SDL_GetTicks() - startTick;
-        if (emulationSpeed < MS_PER_FPS)
-            SDL_Delay(MS_PER_FPS - emulationSpeed);
+        if (emulationSpeed < MS_PER_FRAME)
+            SDL_Delay(MS_PER_FRAME - emulationSpeed);
 
 
         while(SDL_PollEvent(&event)) {

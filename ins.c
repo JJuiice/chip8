@@ -8,8 +8,8 @@ static void logOp(const char *msg)
     #ifndef NDEBUG
     char errMsg[100];
     // char errMsg[2 + sizeof(cpu.opcode.ins) + 8 + sizeof(cpu.PC) + 4 + strlen(msg) + 2];
-    sprintf(errMsg, "0x%X (PC: 0x%X) - %s", cpu.opcode.ins, cpu.PC, msg);
-    logErr(errMsg);
+    sprintf(errMsg, "0x%04X (PC: 0x%04X) - %s", cpu.opcode.ins, cpu.PC, msg);
+    logMsg(errMsg);
     #endif
 }
 
@@ -26,18 +26,21 @@ void call(void)
     jmp(cpu.opcode.addr, "0x2NNN: Call NNN");
 }
 
-void storeKeyPInVX(void)
+uint8_t loadKeypress(void)
 {
     logOp("0xFX0A: Wait for keypress to store in VX");
 
     cpu.PC -= 2;
+    const uint8_t *keyboardState = SDL_GetKeyboardState(NULL);
     for(int i = 0; i < KEY_NUM; i++) {
-        if(SDL_GetKeyboardState(NULL)[key_map[i]]) {
+        if(keyboardState[key_map[i]]) {
             cpu.V[cpu.opcode.x] = i;
             cpu.PC += 2;
-            break;
+            return 0;
         }
     }
+
+    return 1;
 }
 
 void draw(void)
@@ -49,14 +52,15 @@ void draw(void)
         uint8_t pixel = cpu.mem[cpu.I + y];
         for(int x = 0; x < 8; x++) {
             if(pixel & (0x80 >> x)) {
-                int gfxInx = (cpu.V[cpu.opcode.x] + x) % GFX_WIDTH +
+                uint32_t gfxInx = (cpu.V[cpu.opcode.x] + x) % GFX_WIDTH +
                              ((cpu.V[cpu.opcode.y] + y) % GFX_HEIGHT) *
                              GFX_WIDTH;
 
                 if(gfx[gfxInx] == PIXEL_ON)
                     cpu.V[0xF] = 1;
 
-                gfx[gfxInx] ^= ~PIXEL_OFF;
+
+                gfx[gfxInx] ^= PIXEL_ON;
 
                 if (!cpu.dFlag)
                     cpu.dFlag = 1;
@@ -65,7 +69,7 @@ void draw(void)
     }
 }
 
-void bcdXReg(void)
+void bcd(void)
 {
     logOp("0xFX33: Store BCD of VX");
     cpu.mem[cpu.I]     = cpu.V[cpu.opcode.x] / 100;
@@ -73,7 +77,7 @@ void bcdXReg(void)
     cpu.mem[cpu.I + 2] = cpu.V[cpu.opcode.x] % 10;
 }
 
-void sbXRegInOFLSB(uint8_t sb, const char *logMsg)
+void loadMask(uint8_t sb, const char *logMsg)
 {
     logOp(logMsg);
 
@@ -100,21 +104,21 @@ void regMemTrans(uint8_t *dst, const uint8_t *src, const uint16_t srcSize, const
         memcpy(dst + iOffset, src, cpu.opcode.x + 1);
 }
 
-void setReg(const uint8_t reg, const uint8_t val, const char *logMsg)
+void loadReg(const uint8_t reg, const uint8_t val, const char *logMsg)
 {
     logOp(logMsg);
 
     cpu.V[reg] = val;
 }
 
-void setI(const uint16_t val, const char *logMsg)
+void loadI(const uint16_t val, const char *logMsg)
 {
     logOp(logMsg);
 
     cpu.I = val;
 }
 
-void setTimer(const uint8_t timer, const uint8_t delay, const char *logMsg)
+void loadTimer(const uint8_t timer, const uint8_t delay, const char *logMsg)
 {
     logOp(logMsg);
 
@@ -132,7 +136,7 @@ void skipNextIns(uint8_t cond, const char *logMsg)
         cpu.PC += 2;
 }
 
-void addXRegWithOverflow(uint8_t rVal, const uint8_t cond, const char *logMsg)
+void addOF(uint8_t rVal, const uint8_t cond, const char *logMsg)
 {
     logOp(logMsg);
 
@@ -140,14 +144,14 @@ void addXRegWithOverflow(uint8_t rVal, const uint8_t cond, const char *logMsg)
     cpu.V[cpu.opcode.x] += rVal;
 }
 
-void dispClear()
+void dispClear(void)
 {
     logOp("0x00E0: Clear display");
     memset(gfx, 0, sizeof(gfx));
     cpu.dFlag = 1;
 }
 
-void ret()
+void ret(void)
 {
     logOp("0x00EE: RET");
     cpu.PC = cpu.stack[--cpu.SP];

@@ -8,7 +8,11 @@
 #include <time.h>
 #include <string.h>
 
+#define DEBOUNCE_MS 150 
+
 CPU cpu;
+
+static uint32_t debounceSTick;
 
 const SDL_Scancode key_map[KEY_NUM] =
 {
@@ -33,8 +37,9 @@ void init()
     memcpy(cpu.mem, fontset, sizeof(fontset));
     memset(cpu.stack, 0, sizeof(cpu.stack));
     memset(cpu.V, 0, sizeof(cpu.V));
-    memset(gfx, PIXEL_OFF, sizeof(gfx));
+    memset(gfx, ~PIXEL_ON, sizeof(gfx));
 
+    debounceSTick = 0;
     srand(time(NULL));
 }
 
@@ -64,10 +69,30 @@ void loadGame(const char *name)
     memcpy(&cpu.mem[512], buffer, sizeof(buffer));
 }
 
+static uint8_t debouncing()
+{
+    uint8_t isDebouncing = 0;
+
+    if(debounceSTick > 0)
+        if(SDL_GetTicks() - debounceSTick >= DEBOUNCE_MS) {
+            debounceSTick = 0;
+        } else {
+            isDebouncing = 1;
+            cpu.PC -= 2;
+        }
+        
+    return isDebouncing;
+}
+
+static void setDebounce()
+{
+    debounceSTick = SDL_GetTicks();
+}
+
 static void logOpQuit()
 {
     char errMsg[20 + sizeof(cpu.opcode.ins) + 5 + sizeof(cpu.opcode.ins) + 1];
-    sprintf(errMsg, "Undefined opcode [0x%X]: 0x%X", cpu.opcode.ins & 0xF000, cpu.opcode.ins);
+    sprintf(errMsg, "Undefined opcode [0x%04X]: 0x%04X", cpu.opcode.ins & 0xF000, cpu.opcode.ins);
     logQuit(errMsg);
 }
 
@@ -78,6 +103,14 @@ void emulateCycle()
     uint8_t vx = cpu.V[cpu.opcode.x];
     uint8_t vy = cpu.V[cpu.opcode.y];
 
+    if(cpu.dTimer > 0)
+        cpu.dTimer--;
+
+    if(cpu.sTimer > 0) {
+        printf("\nBEEP!\n");
+        printf("\a\n");
+        cpu.sTimer--;
+    }
 
     // Decode
     switch(cpu.opcode.op)
@@ -86,10 +119,10 @@ void emulateCycle()
         {
             switch(cpu.opcode.addr)
             {
-                case 0x0E0: dispClear(cpu.opcode.ins, &cpu.dFlag); break;
-                case 0x0EE: ret(&cpu); break;
+                case 0x0E0: dispClear(); break;
+                case 0x0EE: ret(); break;
                 default:
-                    logQuit("MC Subroutines are ignored my modern interpreters");
+                    logQuit("MC Subroutines are ignored by modern interpreters");
             }
             break;
         }
@@ -98,49 +131,49 @@ void emulateCycle()
         case 0x3: skipNextIns(vx == cpu.opcode.kk, "0x3XNN: Skip next instruction if VX==NN"); break;
         case 0x4: skipNextIns(vx != cpu.opcode.kk, "0x4XNN: Skip next instruction if VX!=NN"); break;
         case 0x5: skipNextIns(vx == vy, "0x5XY0: Skip next instruction if VX==VY"); break;
-        case 0x6: setReg(cpu.opcode.x, cpu.opcode.kk, "0x6XNN: VX = NN"); break;
-        case 0x7: setReg(cpu.opcode.x, vx + cpu.opcode.kk, "0x7XNN: VX += NN (No Carry)"); break;
+        case 0x6: loadReg(cpu.opcode.x, cpu.opcode.kk, "0x6XNN: VX = NN"); break;
+        case 0x7: loadReg(cpu.opcode.x, vx + cpu.opcode.kk, "0x7XNN: VX += NN (No Carry)"); break;
         case 0x8:
         {
             switch(cpu.opcode.n)
             {
-                case 0x0: setReg(cpu.opcode.x, vy, "0x8XY0: VX = VY"); break;
-                case 0x1: setReg(cpu.opcode.x, vx | vy, "0x8XY0: VX = VX | VY"); break;
-                case 0x2: setReg(cpu.opcode.x, vx & vy, "0x8XY2: VX = VX & VY"); break;
-                case 0x3: setReg(cpu.opcode.x, vx ^ vy, "0x8XY3: VX = VX ^ VY"); break;
-                case 0x4: addXRegWithOverflow(vy, (vy + vx) > 0xFF, "0x8XY4: VX += VY (With VF Carry)"); break;
-                case 0x5: addXRegWithOverflow(-vy, vx > vy, "0x8XY5: VX -= VY (With VF Borrow)"); break;
-                case 0x6: sbXRegInOFLSB(LSB8_MASK, "0x8XY6: Store VX LSB in VF LSB, then VX>>=1"); break;
-                case 0x7: addXRegWithOverflow(vy - vx, vx < vy, "0x8XY7: VX=VY-VX (with VF Borrow)"); break;
-                case 0xE: sbXRegInOFLSB(MSB8_MASK, "0x8XYE: Store VX MSB in VF LSB, then VX<<=1"); break;
+                case 0x0: loadReg(cpu.opcode.x, vy, "0x8XY0: VX = VY"); break;
+                case 0x1: loadReg(cpu.opcode.x, vx | vy, "0x8XY0: VX = VX | VY"); break;
+                case 0x2: loadReg(cpu.opcode.x, vx & vy, "0x8XY2: VX = VX & VY"); break;
+                case 0x3: loadReg(cpu.opcode.x, vx ^ vy, "0x8XY3: VX = VX ^ VY"); break;
+                case 0x4: addOF(vy, (vy + vx) > 0xFF, "0x8XY4: VX += VY (With VF Carry)"); break;
+                case 0x5: addOF(-vy, vx > vy, "0x8XY5: VX -= VY (With VF Borrow)"); break;
+                case 0x6: loadMask(LSB8_MASK, "0x8XY6: Store VX LSB in VF LSB, then VX>>=1"); break;
+                case 0x7: addOF(vy - vx, vx < vy, "0x8XY7: VX=VY-VX (with VF Borrow)"); break;
+                case 0xE: loadMask(MSB8_MASK, "0x8XYE: Store VX MSB in VF LSB, then VX<<=1"); break;
                 default:
                     logOpQuit();
             }
             break;
         }
         case 0x9: skipNextIns(vx != vy, "0x9XYN: Skip next instruction if VX!=VY"); break;
-        case 0xA: setI(cpu.opcode.addr, "0xANNN: I = NNN"); break;
+        case 0xA: loadI(cpu.opcode.addr, "0xANNN: I = NNN"); break;
         case 0xB: jmp(cpu.V[0] + cpu.opcode.addr, "0xBNNN: PC = V0 + NNN"); cpu.PC -= 2; break;
-        case 0xC: setReg(cpu.opcode.x, (rand() % 0xFF) & cpu.opcode.kk, "0xCXNN: VX = rand() & NNN"); break;
+        case 0xC: loadReg(cpu.opcode.x, (rand() % 0xFF) & cpu.opcode.kk, "0xCXNN: VX = rand() & NNN"); break;
         case 0xD: draw(); break;
         case 0xE:
             switch(cpu.opcode.kk)
             {
                 case 0x9E: skipNextIns(SDL_GetKeyboardState(NULL)[key_map[vx]], "0xEX93: Skip next instruction if key()==VX"); break;
-                case 0xA1: skipNextIns(~SDL_GetKeyboardState(NULL)[key_map[vx]], "0xEXA1: Skip next instruction if key()!=VX"); break;
+                case 0xA1: skipNextIns(!SDL_GetKeyboardState(NULL)[key_map[vx]], "0xEXA1: Skip next instruction if key()!=VX"); break;
                 default:
                     logOpQuit();
             }
             break;
         case 0xF:
             switch(cpu.opcode.kk) {
-                case 0x07: setReg(cpu.opcode.x, cpu.dTimer, "0xFX07: VX = dTimer"); break;
-                case 0x0A: storeKeyPInVX(); break;
-                case 0x15: setTimer(DTIMER, vx, "0xFX15: dTimer = VX"); break;
-                case 0x18: setTimer(STIMER, vx, "0xFX18: sTimer = VX"); break;
-                case 0x1E: setI(cpu.I + vx, "0xFX1E: I += VX (No Carry)"); break;
-                case 0x29: setI(vx * 5, "0xFX29: I = sprite_addr[VX]"); break;
-                case 0x33: bcdXReg(); break;
+                case 0x07: loadReg(cpu.opcode.x, cpu.dTimer, "0xFX07: VX = dTimer"); break;
+                case 0x0A: if(!debouncing() && !loadKeypress()) setDebounce(); break;
+                case 0x15: loadTimer(DTIMER, vx, "0xFX15: dTimer = VX"); break;
+                case 0x18: loadTimer(STIMER, vx, "0xFX18: sTimer = VX"); break;
+                case 0x1E: loadI(cpu.I + vx, "0xFX1E: I += VX (No Carry)"); break;
+                case 0x29: loadI(vx * 5, "0xFX29: I = sprite_addr[VX]"); break;
+                case 0x33: bcd(); break;
                 case 0x55: regMemTrans(cpu.mem, cpu.V, 16, "0xFX55: Store V0 to VX in memory starting at address I"); break;
                 case 0x65: regMemTrans(cpu.V, cpu.mem, MEM_SIZE, "0xFX65: Fill V0 to VX in from memory values starting at address I"); break;
                 default:
@@ -149,14 +182,6 @@ void emulateCycle()
             break;
         default:
             logOpQuit();
-    }
-
-    if(cpu.dTimer > 0)
-        cpu.dTimer--;
-
-    if(cpu.sTimer > 0) {
-        printf("\nBEEP!\n");
-        printf("\a\n");
     }
 
     cpu.PC += 2;

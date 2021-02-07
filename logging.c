@@ -5,14 +5,14 @@
 
 #define QUIT_DELAY_MS 3000
 
-void logErr(const char *msg)
+void logMsg(const char *msg)
 {
     fprintf(stderr, "%s\n", msg);
 }
 
 void logQuit(const char *msg)
 {
-    logErr(msg);
+    logMsg(msg);
     SDL_ClearError();
     SDL_Delay(QUIT_DELAY_MS);
     SDL_Quit();

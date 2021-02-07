@@ -2,9 +2,6 @@
 #define CPU_H
 #include <stdint.h>
 
-#define PIXEL_ON 0xFFFFFFFF
-#define PIXEL_OFF 0xFF000000
-
 #define MEM_SIZE 4096
 #define STACK_SIZE 16
 
