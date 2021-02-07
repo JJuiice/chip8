@@ -2,8 +2,9 @@
 #include "constants.h"
 #include "logging.h"
 #include "cpu.h"
+#include "io.h"
 
-#define QUIT_DELAY_MS 3000
+#define QUIT_DELAY_MS 2000
 
 void logMsg(const char *msg)
 {
@@ -24,16 +25,14 @@ void checkSDLError(int line, const char *msg)
 	const char *error = SDL_GetError();
 	if (*error != '\0')
 	{
-        char *fullError;
-        char *sdlError;
-        snprintf(sdlError, 13 + strlen(error),"SDL Error: %s\n", error);
-		if (line != -1)
-			snprintf(fullError, strlen(sdlError) + 11 + sizeof(int), "%s + line: %i\n", sdlError, line);
-        else
-            fullError = sdlError;
+        char sdlError[13 + strlen(error) + 10 + sizeof(int) + 1];
+        sprintf(sdlError, "SDL Error: %s\n", error);
         
-        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "%s", fullError);
-        logQuit(msg);
+		if (line != -1)
+			sprintf(sdlError, "%s + line: %i", sdlError, line);
+        
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "%s\n", sdlError);
+        logQuit(sdlError);
 	}
 }
 

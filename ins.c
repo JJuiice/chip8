@@ -1,6 +1,7 @@
 #include "ins.h"
 #include "constants.h"
 #include "logging.h"
+#include "io.h"
 #include <stdio.h>
 
 static void logOp(const char *msg)

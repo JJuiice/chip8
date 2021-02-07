@@ -1,4 +1,4 @@
-#include "gfx.h"
+#include "io.h"
 #include "logging.h"
 #include <stdio.h>
 
@@ -25,8 +25,8 @@ const uint8_t fontset[80] =
     0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
 
-void setupGfx(const char *name, const short winNameLen) {
-    if (SDL_Init(SDL_INIT_VIDEO) < 0)
+void setupIO(const char *name, const short winNameLen) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
         logQuit("Unable to initialize SDL");
 
     char winName[winNameLen + 1];

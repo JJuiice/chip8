@@ -7,8 +7,8 @@ CFLAGS=-g -pedantic -std=c11
 LFLAGS=-lm -lSDL2 -lSDL2main
 WIN_EXE=emulator.exe
 LNX_BIN=emulator.out
-DEPS=chip8.h cpu.h gfx.h ins.h logging.h
-OBJS=main.o cpu.o gfx.o ins.o logging.o
+DEPS=chip8.h cpu.h io.h ins.h logging.h
+OBJS=main.o cpu.o io.o ins.o logging.o
 
 .PHONY: all clean win lnx
 

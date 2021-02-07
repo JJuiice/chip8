@@ -49,6 +49,7 @@ typedef struct CPU
 void init();
 void loadGame(const char*);
 void emulateCycle();
+void updateTimers();
 
 extern CPU cpu;
 

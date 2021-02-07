@@ -20,7 +20,7 @@ typedef struct Display {
     SDL_Texture *texture;
 } Display;
 
-void setupGfx(const char *name, const short winNameLen);
+void setupIO(const char *name, const short winNameLen);
 void drawGfx();
 void cleanGfx();
 

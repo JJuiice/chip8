@@ -1,7 +1,7 @@
 #include "constants.h"
 #include "cpu.h"
 #include "logging.h"
-#include "gfx.h"
+#include "io.h"
 #include "ins.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -69,6 +69,17 @@ void loadGame(const char *name)
     memcpy(&cpu.mem[512], buffer, sizeof(buffer));
 }
 
+void updateTimers() {
+    if(cpu.dTimer > 0)
+        cpu.dTimer--;
+
+    if(cpu.sTimer > 0) {
+        printf("\nBEEP!\n");
+        printf("\a\n");
+        cpu.sTimer--;
+    }
+}
+
 static uint8_t debouncing()
 {
     uint8_t isDebouncing = 0;
@@ -102,15 +113,6 @@ void emulateCycle()
     cpu.opcode.ins = cpu.mem[cpu.PC] << 8 | cpu.mem[cpu.PC + 1];
     uint8_t vx = cpu.V[cpu.opcode.x];
     uint8_t vy = cpu.V[cpu.opcode.y];
-
-    if(cpu.dTimer > 0)
-        cpu.dTimer--;
-
-    if(cpu.sTimer > 0) {
-        printf("\nBEEP!\n");
-        printf("\a\n");
-        cpu.sTimer--;
-    }
 
     // Decode
     switch(cpu.opcode.op)
