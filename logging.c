@@ -20,12 +20,12 @@ void logQuit(const char *msg)
     exit(1);
 }
 
-void checkSDLError(int line, const char *msg)
+void checkSDLError(int line)
 {
 	const char *error = SDL_GetError();
 	if (*error != '\0')
 	{
-        char sdlError[13 + strlen(error) + 10 + sizeof(int) + 1];
+        char sdlError[100];
         sprintf(sdlError, "SDL Error: %s\n", error);
         
 		if (line != -1)

@@ -74,9 +74,14 @@ void updateTimers() {
         cpu.dTimer--;
 
     if(cpu.sTimer > 0) {
-        printf("\nBEEP!\n");
-        printf("\a\n");
+        if(SDL_GetAudioDeviceStatus(sound) != SDL_AUDIO_PLAYING) {
+            SDL_PauseAudioDevice(sound, 0);
+            checkSDLError(__LINE__);
+        }
         cpu.sTimer--;
+    } else if (SDL_GetAudioDeviceStatus(sound) == SDL_AUDIO_PLAYING) {
+        SDL_PauseAudioDevice(sound, 1);
+        checkSDLError(__LINE__);
     }
 }
 

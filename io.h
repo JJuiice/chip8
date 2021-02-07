@@ -22,8 +22,9 @@ typedef struct Display {
 
 void setupIO(const char *name, const short winNameLen);
 void drawGfx();
-void cleanGfx();
+void cleanIO();
 
+extern SDL_AudioDeviceID sound;
 extern uint32_t gfx[GFX_RESOULTION];
 extern const uint8_t fontset[80];
 extern const SDL_Scancode key_map[KEY_NUM];
