@@ -58,7 +58,7 @@ void setupIO(const char *name, const short winNameLen) {
     SDL_AudioSpec spec;
     SDL_zero(spec);
     spec.freq = SPEC_FREQ;
-    spec.format = AUDIO_S8;
+    spec.format = AUDIO_U8;
     spec.channels = 1;
     spec.samples = SAMPLE_SIZE;
     spec.callback = soundCallback;
