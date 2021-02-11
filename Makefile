@@ -1,3 +1,11 @@
+#
+# Copyright (C) 2020-2021 Ojas Anand
+# 
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# You should have received a copy of the GNU General Public License along with this program. If not, see https://www.gnu.org/licenses/. 
+#
+
 CC=x86_64-w64-mingw32-gcc
 INCLUDE_DIRS=-I.
 WIN_ADDITIONAL_CFLAGS=-mwindows $(INCLUDE_DIRS) -I$(WIN_MINGW_INC) 
@@ -30,6 +38,7 @@ $(WIN_EXE): $(OBJS)
 
 $(LNX_BIN): $(OBJS)
 	$(CC) -o $@ $^ $(CFLAGS) $(LFLAGS)
+	chmod 755 $@
 
 %.o: %.c $(DEPS) 
 	$(CC) -c -o $@ $< $(CFLAGS)

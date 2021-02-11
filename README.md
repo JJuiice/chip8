@@ -1,22 +1,32 @@
 # Chip 8 Emulator
 
+Chip-8 emulator written in C
+
 ## Requirements
-- gcc
-- mingw-w64 (for Windows)
-- libsdl2-dev
+- gcc (Linux)
+- mingw-w64 (Windows)
+- OS-specific SDL2 development and runtime headers
 
-- Development was on Windows 10 machine with WSL (Ubuntu) as dev environment and both lnx and win64 SDL2 headers downloaded
-
-## Usage
+## Build
 ```
 git clone https://github.com/O-Juice/chip8.git
 cd chip8
-make [win (default, windows [.exe]) | lnx (Linux [.out])]
 ``` 
-Resulting binary will be an `emulator` binary file
+__Windows:__  
+`make`  
+__Linux:__  
+`make lnx`  
+__Clean:__  
+`make clean`
+
+## Usage
+- Run the `emulator` binary file via the command-line with the filepath to a Chip-8 ROM as a single argument
+- Drag & Drop ROM on to `emulator` binary
+
+### __Note__
+- If MinGW was installed on Windows and not WSL (Ubuntu), the `CC` variable in the first line in the Makefile may need to be set to `gcc`
+- Windows SDL2 *include* and *lib* directory path are read from the __WIN_MINGW_INC__ and __WIN_MINGW_LIBS__ environment variables in the Makefile
 
 ## References
 - [SDL Wiki](https://wiki.libsdl.org/)
-- [SDL Source Code](https://hg.libsdl.org/)
 - http://www.multigesture.net/articles/how-to-write-an-emulator-chip-8-interpreter/
-- https://www.khronos.org/opengl/wiki/Main_Page
