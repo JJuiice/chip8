@@ -33,6 +33,14 @@ const uint8_t fontset[80] =
     0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
 
+const SDL_Scancode key_map[KEY_NUM] =
+{
+    SDL_SCANCODE_X, SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3,
+    SDL_SCANCODE_Q, SDL_SCANCODE_W, SDL_SCANCODE_E, SDL_SCANCODE_A,
+    SDL_SCANCODE_S, SDL_SCANCODE_D, SDL_SCANCODE_Z, SDL_SCANCODE_C,
+    SDL_SCANCODE_4, SDL_SCANCODE_R, SDL_SCANCODE_F, SDL_SCANCODE_V
+};
+
 static void soundCallback(void *udata, uint8_t *stream, int len)
 {
     int streamLen = len > SAMPLE_SIZE ? SAMPLE_SIZE : len / sizeof(*stream);
@@ -45,13 +53,9 @@ static void soundCallback(void *udata, uint8_t *stream, int len)
 
 }
 
-void setupIO(const char *name, const short winNameLen) {
+void setupIO(const char *name) {
     SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO);
     checkSDLError(__LINE__);
-
-    char winName[winNameLen + 1];
-    memcpy(winName, name, winNameLen);
-    winName[winNameLen] = 0;
 
     tVal = 0;
 
@@ -67,7 +71,7 @@ void setupIO(const char *name, const short winNameLen) {
     checkSDLError(__LINE__);
 
     display.window = SDL_CreateWindow(
-                    winName,
+                    name,
                     SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                     GFX_WIDTH * SCREEN_SCALE, GFX_HEIGHT * SCREEN_SCALE,
                     SDL_WINDOW_SHOWN

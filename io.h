@@ -1,7 +1,7 @@
 #ifndef GFX_H
 #define GFX_H
 
-#ifndef LNX
+#if defined _WIN32 || defined __CYGWIN__
 #define SDL_MAIN_HANDLED
 #endif
 
@@ -20,7 +20,7 @@ typedef struct Display {
     SDL_Texture *texture;
 } Display;
 
-void setupIO(const char *name, const short winNameLen);
+void setupIO(const char *name);
 void drawGfx();
 void cleanIO();
 

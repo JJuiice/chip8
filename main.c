@@ -7,40 +7,53 @@
 
 #define CLOCK_SPEED 500 
 
-#define MAX_FILE_LEN 255
 #define C8_DELIM_LEN_OFFSET -4 
 
-static void getGameName(char name[MAX_FILE_LEN])
+static void getGameName(char *filepath, char **gameName)
 {
-    printf("Enter name: ");
-    fgets(name, MAX_FILE_LEN, stdin);
+    if(strlen(filepath) < 5)
+        logErrQuit("A valid .ch8 binary file must be provided");
+ 
+    char delimiter;
+    #if defined _WIN32 || defined __CYGWIN__
+        delimiter = '\\';
+    #else
+        delimiter = '/';
+    #endif
 
-    const short nameLength = strlen(name);
-    if (nameLength <= 0 || nameLength > MAX_FILE_LEN ) 
-        logQuit("Invalid file name");
+    char *filename = NULL;
+    char *nameDelim = strrchr(filepath, delimiter);
+    if(nameDelim)
+        filename = nameDelim + 1;
+    else
+        filename = filepath; 
     
-    name[strlen(name) - 1] = 0;
+    const short filenameLen = strlen(filename) + C8_DELIM_LEN_OFFSET;
+    *gameName = (char *) malloc(filenameLen + 1);
+    memcpy(*gameName, filename, filenameLen);
+    (*gameName)[filenameLen] = 0;
 }
 
 int main(int argc, char **argv)
 {
     const uint16_t FRAME60_MS = 1000 / 60;
     const uint16_t CLOCK_MS = 1000 / CLOCK_SPEED;
-    char name[MAX_FILE_LEN];
+    char *name;
 
-    #ifndef NDEBUG
-    const char *fName = "Airplane.ch8"; // "test_opcode.ch8"; 
-    sprintf(name, "%s", fName);
-    #else
-    getGameName(name);
-    #endif
-    const short winNameLen = strlen(name) + C8_DELIM_LEN_OFFSET;
+    logFile = fopen("output.log", "w");
 
-    setupIO(name, winNameLen);
+    if(argc != 2)
+        logErrQuit("Single Chip-8 binary argument required");
+
+    getGameName(argv[1], &name);
+
+    setupIO(name);
+    free(name);
+    name = NULL;
 
     init();
 
-    loadGame(name);
+    loadGame(argv[1]);
 
     SDL_Event event;
     uint32_t timerTick = SDL_GetTicks();
@@ -71,5 +84,6 @@ int main(int argc, char **argv)
    }
 
     cleanIO();
+    fclose(logFile);
     exit(0);
 }

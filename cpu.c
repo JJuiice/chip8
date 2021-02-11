@@ -14,14 +14,6 @@ CPU cpu;
 
 static uint32_t debounceSTick;
 
-const SDL_Scancode key_map[KEY_NUM] =
-{
-    SDL_SCANCODE_X, SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3,
-    SDL_SCANCODE_Q, SDL_SCANCODE_W, SDL_SCANCODE_E, SDL_SCANCODE_A,
-    SDL_SCANCODE_S, SDL_SCANCODE_D, SDL_SCANCODE_Z, SDL_SCANCODE_C,
-    SDL_SCANCODE_4, SDL_SCANCODE_R, SDL_SCANCODE_F, SDL_SCANCODE_V
-};
-
 void init()
 {
     // Reset pointers, opcodes and timers
@@ -51,7 +43,7 @@ void loadGame(const char *name)
         const char *err = "Cannot open game file: %s";
         char msg[strlen(err) - 2 + strlen(name) + 1];
         sprintf(msg, err, name);
-        logQuit(msg);
+        logSDLErrQuit(msg);
     }
 
     fseek(game, 0L, SEEK_END);
@@ -64,7 +56,7 @@ void loadGame(const char *name)
     bytesRead = fread(buffer, sizeof(uint8_t), BUFFER_SIZE, game);
 
     if (bytesRead != BUFFER_SIZE)
-        logQuit("Bytes read does not match file size");
+        logSDLErrQuit("Bytes read does not match file size");
 
     memcpy(&cpu.mem[512], buffer, sizeof(buffer));
 }
@@ -109,7 +101,7 @@ static void logOpQuit()
 {
     char errMsg[20 + sizeof(cpu.opcode.ins) + 5 + sizeof(cpu.opcode.ins) + 1];
     sprintf(errMsg, "Undefined opcode [0x%04X]: 0x%04X", cpu.opcode.ins & 0xF000, cpu.opcode.ins);
-    logQuit(errMsg);
+    logSDLErrQuit(errMsg);
 }
 
 void emulateCycle()
@@ -129,7 +121,7 @@ void emulateCycle()
                 case 0x0E0: dispClear(); break;
                 case 0x0EE: ret(); break;
                 default:
-                    logQuit("MC Subroutines are ignored by modern interpreters");
+                    logSDLErrQuit("MC Subroutines are ignored by modern interpreters");
             }
             break;
         }

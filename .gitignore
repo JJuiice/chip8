@@ -57,3 +57,6 @@ tags
 
 # CHIP-8 Binaries
 *.ch8
+
+# LOG Files
+*.log

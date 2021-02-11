@@ -1,6 +1,6 @@
 CC=x86_64-w64-mingw32-gcc
 INCLUDE_DIRS=-I.
-WIN_INCLUDE_DIRS=$(INCLUDE_DIRS) -I$(WIN_MINGW_INC) 
+WIN_ADDITIONAL_CFLAGS=-mwindows $(INCLUDE_DIRS) -I$(WIN_MINGW_INC) 
 LNX_INCLUDE_DIRS=$(INCLUDE_DIRS) -I/usr/include -I/usr/include/x86_64-linux-gnu
 # O1-O3 and Og optimization messes with emulation
 CFLAGS=-g -pedantic -std=c11
@@ -14,12 +14,12 @@ OBJS=main.o cpu.o io.o ins.o logging.o
 
 all: win
 
-win: CFLAGS+=$(WIN_INCLUDE_DIRS)
+win: CFLAGS+=$(WIN_ADDITIONAL_CFLAGS)
 win: LFLAGS+=-L$(WIN_MINGW_LIBS)
 win: $(WIN_EXE) 
 
 lnx: CC=gcc
-lnx: CFLAGS+=$(LNX_INCLUDE_DIRS) -DLNX
+lnx: CFLAGS+=$(LNX_INCLUDE_DIRS)
 lnx: $(LNX_BIN)
 
 clean:

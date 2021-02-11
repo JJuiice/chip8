@@ -90,7 +90,7 @@ void loadMask(uint8_t sb, const char *logMsg)
         cpu.V[0xF] = oF >> 7;
         cpu.V[cpu.opcode.x] <<= 1;
     } else {
-        logQuit("Inappropriate Bit Mask");
+        logSDLErrQuit("Inappropriate Bit Mask");
     }
 }
 
