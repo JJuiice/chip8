@@ -9,7 +9,6 @@
 #ifndef INS_H
 #define INS_H
 #include <stdint.h>
-#include "cpu.h"
 
 void jmp(const uint16_t addr, const char *logMsg);
 void call(void);
@@ -25,6 +24,6 @@ void addOF(uint8_t rVal, const uint8_t cond, const char *logMsg);
 void dispClear(void);
 void ret(void);
 
-uint8_t loadKeypress(void);
+int loadKeypress(void);
 
 #endif

@@ -10,41 +10,35 @@
 #include "logging.h"
 #include <stdio.h>
 #include <math.h>
+#include <SDL2/SDL.h>
+
+#define PIXEL_ON 0xFFFFFF
+#define SCREEN_SCALE 10 
+#define GFX_RESOULTION (GFX_WIDTH * GFX_HEIGHT)
+
 #define SPEC_FREQ 44100
 #define SAMPLE_SIZE 1024 
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
+typedef struct Display {
+    SDL_Window *window;
+    SDL_Renderer *renderer;
+    SDL_Texture *texture;
+} Display;
+
+static SDL_Event event;
 static Display display;
+static SDL_AudioDeviceID sound;
+static uint32_t gfx[GFX_RESOULTION];
 static double tVal;
 
 static const uint8_t DOUBLE_PI = M_PI * 2;
 static const double WAVE_FREQ = 900;
 
-SDL_AudioDeviceID sound;
-uint32_t gfx[GFX_RESOULTION];
-const uint8_t fontset[80] =
-{
-    0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
-    0x20, 0x60, 0x20, 0x20, 0x70, // 1
-    0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
-    0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
-    0x90, 0x90, 0xF0, 0x10, 0x10, // 4
-    0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
-    0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
-    0xF0, 0x10, 0x20, 0x40, 0x40, // 7
-    0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
-    0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
-    0xF0, 0x90, 0xF0, 0x90, 0x90, // A
-    0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
-    0xF0, 0x80, 0x80, 0x80, 0xF0, // C
-    0xE0, 0x90, 0x90, 0x90, 0xE0, // D
-    0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-    0xF0, 0x80, 0xF0, 0x80, 0x80  // F
-};
-
-const SDL_Scancode key_map[KEY_NUM] =
+static const SDL_Scancode key_map[KEY_NUM] =
 {
     SDL_SCANCODE_X, SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3,
     SDL_SCANCODE_Q, SDL_SCANCODE_W, SDL_SCANCODE_E, SDL_SCANCODE_A,
@@ -66,7 +60,7 @@ static void soundCallback(void *udata, uint8_t *stream, int len)
 
 void setupIO(const char *name) {
     SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO);
-    checkSDLError(__LINE__);
+    checkSDLErr(__LINE__);
 
     tVal = 0;
 
@@ -79,7 +73,7 @@ void setupIO(const char *name) {
     spec.callback = soundCallback;
 
     sound = SDL_OpenAudioDevice(NULL, 0, &spec, NULL, 0);
-    checkSDLError(__LINE__);
+    checkSDLErr(__LINE__);
 
     display.window = SDL_CreateWindow(
                     name,
@@ -87,14 +81,14 @@ void setupIO(const char *name) {
                     GFX_WIDTH * SCREEN_SCALE, GFX_HEIGHT * SCREEN_SCALE,
                     SDL_WINDOW_SHOWN
                     );
-    checkSDLError(__LINE__);
+    checkSDLErr(__LINE__);
 
     display.renderer = SDL_CreateRenderer(
                     display.window,
                     -1,
                     SDL_RENDERER_ACCELERATED
                     );
-    checkSDLError(__LINE__);
+    checkSDLErr(__LINE__);
     
     display.texture = SDL_CreateTexture(
                     display.renderer,
@@ -103,36 +97,113 @@ void setupIO(const char *name) {
                     GFX_WIDTH,
                     GFX_HEIGHT
                     );
-    checkSDLError(__LINE__);
+    checkSDLErr(__LINE__);
 }
 
-void drawGfx() {
-    #ifndef NDEBUG
-    logMsg("Drawing Graphics\n");
-    #endif
 
-    SDL_UpdateTexture(display.texture, NULL, gfx, GFX_WIDTH * sizeof(uint32_t));
-    checkSDLError(__LINE__);
-
-    SDL_RenderCopy(display.renderer, display.texture, NULL, NULL);
-    checkSDLError(__LINE__);
-
-    SDL_RenderPresent(display.renderer);
-    checkSDLError(__LINE__);
-}
-
-void cleanIO() {
+void cleanIO(void) {
     SDL_DestroyTexture(display.texture);
-    checkSDLError(__LINE__);
+    checkSDLErr(__LINE__);
     
     SDL_DestroyRenderer(display.renderer);
-    checkSDLError(__LINE__);
+    checkSDLErr(__LINE__);
 
     SDL_DestroyWindow(display.window);
-    checkSDLError(__LINE__);
+    checkSDLErr(__LINE__);
 
     SDL_CloseAudioDevice(sound);
-    checkSDLError(__LINE__);
+    checkSDLErr(__LINE__);
     
     SDL_Quit();
+}
+
+void drawGfx(void)
+{
+#ifndef NDEBUG
+    logMsg("Drawing Graphics\n");
+#endif
+
+    SDL_UpdateTexture(display.texture, NULL, gfx, GFX_WIDTH * sizeof(uint32_t));
+    checkSDLErr(__LINE__);
+
+    SDL_RenderCopy(display.renderer, display.texture, NULL, NULL);
+    checkSDLErr(__LINE__);
+
+    SDL_RenderPresent(display.renderer);
+    checkSDLErr(__LINE__);
+}
+
+void clrGfx(void)
+{
+    memset(gfx, ~PIXEL_ON, sizeof(gfx));
+}
+
+void flipPx(uint32_t gfxInx)
+{
+    gfx[gfxInx] ^= PIXEL_ON;
+}
+
+void delayGfx(uint32_t ms)
+{
+    SDL_Delay(ms);
+}
+
+int isPxOn(uint32_t gfxInx)
+{
+    return gfx[gfxInx] == PIXEL_ON;
+}
+
+int isAudioPaused(void)
+{
+    return (SDL_GetAudioDeviceStatus(sound) != SDL_AUDIO_PLAYING);
+}
+
+void pauseAudio(uint8_t status)
+{
+    SDL_PauseAudioDevice(sound, status);
+}
+
+const uint8_t* getKeyboardState(void)
+{
+    return SDL_GetKeyboardState(NULL);
+}
+
+uint8_t isKeyPressed(const uint8_t *keyboardState, int keyInx)
+{
+    return keyboardState[key_map[keyInx]];
+}
+
+int getSDLTimestamp(void)
+{
+    return SDL_GetTicks();
+}
+
+int recvEvtQuit(void)
+{
+    int recv = 0;
+
+    while(SDL_PollEvent(&event))
+        if(event.type == SDL_QUIT)
+            recv = 1;
+
+    return recv;
+}
+ 
+void closeSDLErr(const char *msg)
+{
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "%s\n", msg);
+    SDL_ClearError();
+    SDL_Quit();
+}
+
+void checkSDLErr(int line)
+{
+	const char *error = SDL_GetError();
+	if (*error != '\0')
+	{
+        char sdlError[100];
+        sprintf(sdlError, "SDL Error: %s\n + line: %i", error, line);
+
+        logSDLErrQuit(sdlError);
+	}
 }

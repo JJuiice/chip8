@@ -14,26 +14,30 @@
 #endif
 
 #include "constants.h"
-#include <SDL2/SDL.h>
+#include <stdint.h>
 
 #define GFX_WIDTH 64
 #define GFX_HEIGHT 32
-#define GFX_RESOULTION (GFX_WIDTH * GFX_HEIGHT)
-#define SCREEN_SCALE 10 
-#define PIXEL_ON 0xFFFFFF
-
-typedef struct Display {
-    SDL_Window *window;
-    SDL_Renderer *renderer;
-    SDL_Texture *texture;
-} Display;
 
 void setupIO(const char *name);
-void drawGfx();
-void cleanIO();
+void cleanIO(void);
 
-extern SDL_AudioDeviceID sound;
-extern uint32_t gfx[GFX_RESOULTION];
-extern const uint8_t fontset[80];
-extern const SDL_Scancode key_map[KEY_NUM];
+void drawGfx(void);
+void clrGfx(void);
+void flipPx(uint32_t gfxInx);
+void delayGfx(uint32_t ms);
+int isPxOn(uint32_t gfxInx);
+
+int isAudioPaused(void);
+void pauseAudio(uint8_t status);
+
+int getSDLTimestamp(void);
+int recvEvtQuit(void);
+
+const uint8_t* getKeyboardState(void);
+uint8_t isKeyPressed(const uint8_t *keyboardState, int keyInx);
+
+void closeSDLErr(const char *msg);
+void checkSDLErr(int line);
+
 #endif

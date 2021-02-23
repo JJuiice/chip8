@@ -12,6 +12,7 @@
 #include "logging.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #define CLOCK_SPEED 500 
 
@@ -20,7 +21,7 @@
 static void getGameName(char *filepath, char **gameName)
 {
     if(strlen(filepath) < 5)
-        logErrQuit("A valid .ch8 binary file must be provided");
+        logErrQuit("A VALID *.ch8 BINARY FILE MUST BE PROVIDED");
  
     char delimiter;
     #if defined _WIN32 || defined __CYGWIN__
@@ -48,10 +49,10 @@ int main(int argc, char **argv)
     const uint16_t CLOCK_MS = 1000 / CLOCK_SPEED;
     char *name;
 
-    logFile = fopen("output.log", "w");
+    openLogFile();
 
     if(argc != 2)
-        logErrQuit("Single Chip-8 binary argument required");
+        logErrQuit("SINGLE CHIP-8 BINARY ARGUMENT REQUIRED");
 
     getGameName(argv[1], &name);
 
@@ -63,15 +64,14 @@ int main(int argc, char **argv)
 
     loadGame(argv[1]);
 
-    SDL_Event event;
-    uint32_t timerTick = SDL_GetTicks();
+    uint32_t timerTick = getSDLTimestamp();
     uint8_t exec = 1;
     while(exec) {
-        uint32_t startTick = SDL_GetTicks();
+        uint32_t startTick = getSDLTimestamp();
         
         if(startTick - timerTick >= FRAME60_MS) {
             updateTimers();
-            timerTick = SDL_GetTicks();
+            timerTick = getSDLTimestamp();
         }
 
         emulateCycle();
@@ -80,18 +80,14 @@ int main(int argc, char **argv)
             cpu.dFlag = 0;
         }
         
-        uint32_t emulationSpeed = SDL_GetTicks() - startTick;
+        uint32_t emulationSpeed = getSDLTimestamp() - startTick;
         if (emulationSpeed < CLOCK_MS)
-            SDL_Delay(CLOCK_MS - emulationSpeed);
+            delayGfx(CLOCK_MS - emulationSpeed);
 
-
-        while(SDL_PollEvent(&event)) {
-            if(event.type == SDL_QUIT)
-                exec = 0;
-        }
-   }
+        exec = !recvEvtQuit();
+  }
 
     cleanIO();
-    fclose(logFile);
+    closeLogFile();
     exit(0);
 }

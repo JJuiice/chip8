@@ -7,16 +7,17 @@
  */
 
 #include "ins.h"
+#include "cpu.h"
 #include "constants.h"
 #include "logging.h"
 #include "io.h"
 #include <stdio.h>
+#include <string.h>
 
 static void logOp(const char *msg)
 {
     #ifndef NDEBUG
     char errMsg[100];
-    // char errMsg[2 + sizeof(cpu.opcode.ins) + 8 + sizeof(cpu.PC) + 4 + strlen(msg) + 2];
     sprintf(errMsg, "0x%04X (PC: 0x%04X) - %s", cpu.opcode.ins, cpu.PC, msg);
     logMsg(errMsg);
     #endif
@@ -32,17 +33,17 @@ void jmp(const uint16_t addr, const char *logMsg)
 void call(void)
 {
     cpu.stack[cpu.SP++] = cpu.PC;
-    jmp(cpu.opcode.addr, "0x2NNN: Call NNN");
+    jmp(cpu.opcode.addr, "0x2NNN: CALL NNN");
 }
 
-uint8_t loadKeypress(void)
+int loadKeypress(void)
 {
-    logOp("0xFX0A: Wait for keypress to store in VX");
+    logOp("0xFX0A: LD VX, [K-PRESS]");
 
     cpu.PC -= 2;
-    const uint8_t *keyboardState = SDL_GetKeyboardState(NULL);
+    const uint8_t *keyboardState = getKeyboardState();
     for(int i = 0; i < KEY_NUM; i++) {
-        if(keyboardState[key_map[i]]) {
+        if(isKeyPressed(keyboardState, i)) {
             cpu.V[cpu.opcode.x] = i;
             cpu.PC += 2;
             return 0;
@@ -54,7 +55,7 @@ uint8_t loadKeypress(void)
 
 void draw(void)
 {
-    logOp("DXYN: draw(VX, VY, N)");
+    logOp("DXYN: DRW VX, VY, N");
     cpu.V[0xF] = 0;
 
     for(int y = 0; y < cpu.opcode.n; y++) {
@@ -65,11 +66,10 @@ void draw(void)
                              ((cpu.V[cpu.opcode.y] + y) % GFX_HEIGHT) *
                              GFX_WIDTH;
 
-                if(gfx[gfxInx] == PIXEL_ON)
+                if(isPxOn(gfxInx))
                     cpu.V[0xF] = 1;
 
-
-                gfx[gfxInx] ^= PIXEL_ON;
+                flipPx(gfxInx);
 
                 if (!cpu.dFlag)
                     cpu.dFlag = 1;
@@ -80,7 +80,7 @@ void draw(void)
 
 void bcd(void)
 {
-    logOp("0xFX33: Store BCD of VX");
+    logOp("0xFX33: LD [I], BCD(VX)");
     cpu.mem[cpu.I]     = cpu.V[cpu.opcode.x] / 100;
     cpu.mem[cpu.I + 1] = (cpu.V[cpu.opcode.x] / 10) % 10;
     cpu.mem[cpu.I + 2] = cpu.V[cpu.opcode.x] % 10;
@@ -98,7 +98,7 @@ void loadMask(uint8_t sb, const char *logMsg)
         cpu.V[0xF] = oF >> 7;
         cpu.V[cpu.opcode.x] <<= 1;
     } else {
-        logSDLErrQuit("Inappropriate Bit Mask");
+        logSDLErrQuit("INNAPPROPRIATE BIT MASK");
     }
 }
 
@@ -155,8 +155,8 @@ void addOF(uint8_t rVal, const uint8_t cond, const char *logMsg)
 
 void dispClear(void)
 {
-    logOp("0x00E0: Clear display");
-    memset(gfx, 0, sizeof(gfx));
+    logOp("0x00E0: CLS");
+    clrGfx();
     cpu.dFlag = 1;
 }
 
