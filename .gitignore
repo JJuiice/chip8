@@ -133,3 +133,8 @@ tags
 
 # LOG Files
 *.log
+
+# Ignore emscripten output
+*.html
+*.js
+*.wasm

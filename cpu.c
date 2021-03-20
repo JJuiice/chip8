@@ -107,13 +107,14 @@ static uint8_t debouncing()
 {
     uint8_t isDebouncing = 0;
 
-    if(debounceSTick > 0)
+    if(debounceSTick > 0) {
         if(getSDLTimestamp() - debounceSTick >= DEBOUNCE_MS) {
             debounceSTick = 0;
         } else {
             isDebouncing = 1;
             cpu.PC -= 2;
         }
+    }
         
     return isDebouncing;
 }

@@ -13,10 +13,18 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#ifdef __EMSCRIPTEN__
+#define EMS_SIM_INF_LOOP 1
+#include <emscripten.h>
+#endif
 
 #define CLOCK_SPEED 500 
 
 #define C8_DELIM_LEN_OFFSET -4 
+
+typedef struct Context {
+    char *filepath;
+} Context;
 
 static void getGameName(char *filepath, char **gameName)
 {
@@ -43,18 +51,15 @@ static void getGameName(char *filepath, char **gameName)
     (*gameName)[filenameLen] = 0;
 }
 
-int main(int argc, char **argv)
+void game(void *arg)
 {
     const uint16_t FRAME60_MS = 1000 / 60;
     const uint16_t CLOCK_MS = 1000 / CLOCK_SPEED;
+
+    Context *ctx = arg;
     char *name;
 
-    openLogFile();
-
-    if(argc != 2)
-        logErrQuit("SINGLE CHIP-8 BINARY ARGUMENT REQUIRED");
-
-    getGameName(argv[1], &name);
+    getGameName(ctx->filepath, &name);
 
     setupIO(name);
     free(name);
@@ -62,7 +67,7 @@ int main(int argc, char **argv)
 
     init();
 
-    loadGame(argv[1]);
+    loadGame(ctx->filepath);
 
     uint32_t timerTick = getSDLTimestamp();
     uint8_t exec = 1;
@@ -88,6 +93,28 @@ int main(int argc, char **argv)
   }
 
     cleanIO();
+#ifdef __EMSCRIPTEN__
+    emscripten_cancel_main_loop();
+#endif
+}
+
+int main(int argc, char **argv)
+{
+    Context ctx;
+
+    openLogFile();
+
+    if(argc != 2)
+        logErrQuit("SINGLE CHIP-8 BINARY ARGUMENT REQUIRED");
+
+    ctx.filepath = argv[1];
+
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop_arg(game, &ctx, 0, EMS_SIM_INF_LOOP);
+#else
+    game(&ctx);
+#endif
+
     closeLogFile();
     exit(0);
 }

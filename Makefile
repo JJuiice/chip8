@@ -11,7 +11,7 @@ INCLUDE_DIRS=-I.
 WIN_ADDITIONAL_CFLAGS=-mwindows $(INCLUDE_DIRS) -I$(WIN_MINGW_INC) 
 LNX_INCLUDE_DIRS=$(INCLUDE_DIRS) -I/usr/include -I/usr/include/x86_64-linux-gnu
 # O1-O3 and Og optimization messes with emulation
-CFLAGS=-g -pedantic -std=c11
+CFLAGS=-g -pedantic -Wall -std=c11
 LFLAGS=-lm -lSDL2 -lSDL2main
 WIN_EXE=emulator.exe
 LNX_BIN=emulator.out
@@ -42,3 +42,6 @@ $(LNX_BIN): $(OBJS)
 
 %.o: %.c $(DEPS) 
 	$(CC) -c -o $@ $< $(CFLAGS)
+
+# Adding emscripten
+# emcc main.c logging.c io.c ins.c cpu.c -o out.html -Wall -g -lm -s USE_SDL=2 -s WASM=1 -s EXPORTED_FUNCTIONS="['_main']" -s EXPORTED_RUNTIME_METHODS="['ccall', 'cwrap']" -I.
