@@ -12,6 +12,10 @@
 #include <math.h>
 #include <SDL2/SDL.h>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #define PIXEL_ON 0xFFFFFF
 #define SCREEN_SCALE 10 
 #define GFX_RESOULTION (GFX_WIDTH * GFX_HEIGHT)
@@ -58,10 +62,31 @@ static void soundCallback(void *udata, uint8_t *stream, int len)
 
 }
 
-void setupIO(const char *name) {
-    SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO);
-    checkSDLErr(__LINE__);
+static int checkSDLErr(int line)
+{
+    int isErr = 0;
+	const char *error = SDL_GetError();
 
+	if (*error != '\0')
+	{
+        char sdlError[100];
+        sprintf(sdlError, "SDL Error: %s\n + line: %i", error, line);
+
+        isErr = logMsgQuit(sdlError);
+
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "%s\n", sdlError);
+        SDL_ClearError();
+	}
+
+    return isErr;
+}
+
+int setupIO(const char *name)
+{
+    if(SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO))
+        return checkSDLErr(__LINE__);
+
+   
     tVal = 0;
 
     SDL_AudioSpec spec;
@@ -73,7 +98,9 @@ void setupIO(const char *name) {
     spec.callback = soundCallback;
 
     sound = SDL_OpenAudioDevice(NULL, 0, &spec, NULL, 0);
-    checkSDLErr(__LINE__);
+
+    if(!sound)
+        return checkSDLErr(__LINE__);
 
     display.window = SDL_CreateWindow(
                     name,
@@ -81,14 +108,16 @@ void setupIO(const char *name) {
                     GFX_WIDTH * SCREEN_SCALE, GFX_HEIGHT * SCREEN_SCALE,
                     SDL_WINDOW_SHOWN
                     );
-    checkSDLErr(__LINE__);
+    if(!display.window)
+        return checkSDLErr(__LINE__);
 
     display.renderer = SDL_CreateRenderer(
                     display.window,
                     -1,
                     SDL_RENDERER_ACCELERATED
                     );
-    checkSDLErr(__LINE__);
+    if(!display.renderer)
+        return checkSDLErr(__LINE__);
     
     display.texture = SDL_CreateTexture(
                     display.renderer,
@@ -97,40 +126,51 @@ void setupIO(const char *name) {
                     GFX_WIDTH,
                     GFX_HEIGHT
                     );
-    checkSDLErr(__LINE__);
+    if(!display.texture)
+        return checkSDLErr(__LINE__);
+
+#ifdef __EMSCRIPTEN__
+    SDL_ClearError();
+#endif
+    return 0;
 }
 
-
-void cleanIO(void) {
+int cleanIO(void) {
     SDL_DestroyTexture(display.texture);
-    checkSDLErr(__LINE__);
+    if(checkSDLErr(__LINE__))
+        return -1;
     
     SDL_DestroyRenderer(display.renderer);
-    checkSDLErr(__LINE__);
+    if(checkSDLErr(__LINE__))
+        return -1;
 
     SDL_DestroyWindow(display.window);
-    checkSDLErr(__LINE__);
+    if(checkSDLErr(__LINE__))
+        return -1;
 
     SDL_CloseAudioDevice(sound);
-    checkSDLErr(__LINE__);
+    if(checkSDLErr(__LINE__))
+        return -1;
     
     SDL_Quit();
+    return 0;
 }
 
-void drawGfx(void)
+int drawGfx(void)
 {
 #ifndef NDEBUG
     logMsg("Drawing Graphics\n");
 #endif
 
-    SDL_UpdateTexture(display.texture, NULL, gfx, GFX_WIDTH * sizeof(uint32_t));
-    checkSDLErr(__LINE__);
+    if(SDL_UpdateTexture(display.texture, NULL, gfx, GFX_WIDTH * sizeof(uint32_t)))
+        return checkSDLErr(__LINE__);
 
-    SDL_RenderCopy(display.renderer, display.texture, NULL, NULL);
-    checkSDLErr(__LINE__);
+    if(SDL_RenderCopy(display.renderer, display.texture, NULL, NULL))
+        return checkSDLErr(__LINE__);
 
     SDL_RenderPresent(display.renderer);
-    checkSDLErr(__LINE__);
+    
+    return checkSDLErr(__LINE__);
 }
 
 void clrGfx(void)
@@ -158,9 +198,10 @@ int isAudioPaused(void)
     return (SDL_GetAudioDeviceStatus(sound) != SDL_AUDIO_PLAYING);
 }
 
-void pauseAudio(uint8_t status)
+int pauseAudio(uint8_t status, int line)
 {
     SDL_PauseAudioDevice(sound, status);
+    return checkSDLErr(line);
 }
 
 const uint8_t* getKeyboardState(void)
@@ -187,23 +228,4 @@ int recvEvtQuit(void)
             recv = 1;
 
     return recv;
-}
- 
-void closeSDLErr(const char *msg)
-{
-    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "%s\n", msg);
-    SDL_ClearError();
-    SDL_Quit();
-}
-
-void checkSDLErr(int line)
-{
-	const char *error = SDL_GetError();
-	if (*error != '\0')
-	{
-        char sdlError[100];
-        sprintf(sdlError, "SDL Error: %s\n + line: %i", error, line);
-
-        logSDLErrQuit(sdlError);
-	}
 }

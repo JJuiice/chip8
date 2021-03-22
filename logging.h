@@ -12,8 +12,8 @@
 void openLogFile(void);
 void closeLogFile(void);
 void logMsg(const char *msg);
-void logSDLErrQuit(const char *msg);
-void logErrQuit(const char *msg);
 void dumpRegAndPointerInfo(void);
+
+int logMsgQuit(const char *msg);
 
 #endif

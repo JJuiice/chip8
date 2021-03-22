@@ -19,25 +19,22 @@
 #define GFX_WIDTH 64
 #define GFX_HEIGHT 32
 
-void setupIO(const char *name);
-void cleanIO(void);
+int setupIO(const char *name);
+int cleanIO(void);
 
-void drawGfx(void);
 void clrGfx(void);
 void flipPx(uint32_t gfxInx);
 void delayGfx(uint32_t ms);
+int drawGfx(void);
 int isPxOn(uint32_t gfxInx);
 
 int isAudioPaused(void);
-void pauseAudio(uint8_t status);
+int pauseAudio(uint8_t status, int line);
 
 int getSDLTimestamp(void);
 int recvEvtQuit(void);
 
 const uint8_t* getKeyboardState(void);
 uint8_t isKeyPressed(const uint8_t *keyboardState, int keyInx);
-
-void closeSDLErr(const char *msg);
-void checkSDLErr(int line);
 
 #endif

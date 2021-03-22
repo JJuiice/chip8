@@ -54,10 +54,11 @@ typedef struct CPU
     uint8_t dFlag;
 } CPU;
 
-void init();
-void loadGame(const char*);
-void emulateCycle();
-void updateTimers();
+void gameInit(void);
+
+int loadGame(const char*);
+int updateTimers(void);
+int emulateCycle(void);
 
 extern CPU cpu;
 

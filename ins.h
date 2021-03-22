@@ -14,7 +14,6 @@ void jmp(const uint16_t addr, const char *logMsg);
 void call(void);
 void draw(void);
 void bcd(void);
-void loadMask(uint8_t sb, const char *logMsg);
 void regMemTrans(uint8_t *dst, const uint8_t *src, const uint16_t srcSize, const char *logMsg);
 void loadReg(const uint8_t reg, const uint8_t val, const char *logMsg);
 void loadI(const uint16_t val, const char *logMsg);
@@ -25,5 +24,6 @@ void dispClear(void);
 void ret(void);
 
 int loadKeypress(void);
+int loadMask(uint8_t sb, const char *logMsg);
 
 #endif

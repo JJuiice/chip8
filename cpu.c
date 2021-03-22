@@ -41,7 +41,7 @@ static const uint8_t fontset[80] =
             0xF0, 0x80, 0xF0, 0x80, 0x80  // F
         };
 
-void init()
+void gameInit(void)
 {
     // Reset pointers, opcodes and timers
     cpu.PC = 0x200;
@@ -62,7 +62,7 @@ void init()
     srand(time(NULL));
 }
 
-void loadGame(const char *name)
+int loadGame(const char *name)
 {
     FILE *game = fopen(name, "rb");
 
@@ -70,7 +70,7 @@ void loadGame(const char *name)
         const char *err = "CANNOT OPEN GAME FILE: %s";
         char msg[strlen(err) - 2 + strlen(name) + 1];
         sprintf(msg, err, name);
-        logSDLErrQuit(msg);
+        return logMsgQuit(msg);
     }
 
     fseek(game, 0L, SEEK_END);
@@ -83,27 +83,30 @@ void loadGame(const char *name)
     bytesRead = fread(buffer, sizeof(uint8_t), BUFFER_SIZE, game);
 
     if (bytesRead != BUFFER_SIZE)
-        logSDLErrQuit("BYTES READ DO NOT MATCH FILE SIZE");
+        return logMsgQuit("BYTES READ DO NOT MATCH FILE SIZE");
 
     memcpy(&cpu.mem[512], buffer, sizeof(buffer));
+    return 0;
 }
 
-void updateTimers() {
+int updateTimers(void) {
+    int isErr = 0;
+
     if(cpu.dTimer > 0)
         cpu.dTimer--;
 
     if(cpu.sTimer > 0) {
         if(isAudioPaused())
-            pauseAudio(0);
+            isErr = pauseAudio(0, __LINE__);
 
         if((cpu.sTimer--) == 1)
-            pauseAudio(1);
-
-        checkSDLErr(__LINE__);
+            isErr = pauseAudio(1, __LINE__);
     }
+
+    return isErr;
 }
 
-static uint8_t debouncing()
+static uint8_t debouncing(void)
 {
     uint8_t isDebouncing = 0;
 
@@ -119,20 +122,22 @@ static uint8_t debouncing()
     return isDebouncing;
 }
 
-static void setDebounce()
+static void setDebounce(void)
 {
     debounceSTick = getSDLTimestamp();
 }
 
-static void logOpQuit()
+static int logOpQuit(void)
 {
     char errMsg[50];
     sprintf(errMsg, "UNDEFINED OPCODE [0x%04X]: 0x%04X", cpu.opcode.ins & 0xF000, cpu.opcode.ins);
-    logSDLErrQuit(errMsg);
+    return logMsgQuit(errMsg);
 }
 
-void emulateCycle()
+int emulateCycle(void)
 {
+    int isErr = 0;
+
     // Fetch
     cpu.opcode.ins = cpu.mem[cpu.PC] << 8 | cpu.mem[cpu.PC + 1];
     uint8_t vx = cpu.V[cpu.opcode.x];
@@ -148,7 +153,7 @@ void emulateCycle()
                 case 0x0E0: dispClear(); break;
                 case 0x0EE: ret(); break;
                 default:
-                    logSDLErrQuit("MC SUBROUTINES ARE IGNORED BY MODERN INTERPRETERS");
+                    isErr = logMsgQuit("MC SUBROUTINES ARE IGNORED BY MODERN INTERPRETERS");
             }
             break;
         }
@@ -169,11 +174,11 @@ void emulateCycle()
                 case 0x3: loadReg(cpu.opcode.x, vx ^ vy, "0x8XY3: XOR VX, VY"); break;
                 case 0x4: addOF(vy, (vy + vx) > 0xFF, "0x8XY4: ADD VX, VY (WITH CARRY)"); break;
                 case 0x5: addOF(-vy, vx > vy, "0x8XY5: SUB VX, VY (WITH BORROW)"); break;
-                case 0x6: loadMask(LSB8_MASK, "0x8XY6: SHR VX {, VY}"); break;
+                case 0x6: isErr = loadMask(LSB8_MASK, "0x8XY6: SHR VX {, VY}"); break;
                 case 0x7: addOF(vy - vx, vx < vy, "0x8XY7: SUBN VX, VY"); break;
-                case 0xE: loadMask(MSB8_MASK, "0x8XYE: SHL VX {, VY}"); break;
+                case 0xE: isErr = loadMask(MSB8_MASK, "0x8XYE: SHL VX {, VY}"); break;
                 default:
-                    logOpQuit();
+                    isErr = logOpQuit();
             }
             break;
         }
@@ -188,7 +193,7 @@ void emulateCycle()
                 case 0x9E: skipNextIns(isKeyPressed(getKeyboardState(), vx), "0xEX93: SKP VX"); break;
                 case 0xA1: skipNextIns(!isKeyPressed(getKeyboardState(), vx), "0xEXA1: SKNP VX"); break;
                 default:
-                    logOpQuit();
+                    isErr = logOpQuit();
             }
             break;
         case 0xF:
@@ -203,15 +208,16 @@ void emulateCycle()
                 case 0x55: regMemTrans(cpu.mem, cpu.V, 16, "0xFX55: LD [I], V0 (UNTIL VX)"); break;
                 case 0x65: regMemTrans(cpu.V, cpu.mem, MEM_SIZE, "0xFX65: LD V0, [I] (UNTIL VX)"); break;
                 default:
-                    logOpQuit();
+                    isErr = logOpQuit();
             }
             break;
         default:
-            logOpQuit();
+            isErr = logOpQuit();
     }
 
     cpu.PC += 2;
-    #ifndef NDEBUG
+#ifndef NDEBUG
     dumpRegAndPointerInfo();
-    #endif 
+#endif 
+    return isErr;
 } 

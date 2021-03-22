@@ -9,22 +9,25 @@
 #include "constants.h"
 #include "logging.h"
 #include "cpu.h"
-#include "io.h"
 #include <stdio.h>
 #include <stdlib.h>
-
-#define LOG_FILE_NAME "output.log"
 
 static FILE *logFile = NULL;
 
 void openLogFile(void)
 {
-    logFile = fopen(LOG_FILE_NAME, "w");
+#ifndef __EMSCRIPTEN__
+    logFile = fopen("output.log", "w");
+#else
+    logFile = stderr;
+#endif
 }
 
 void closeLogFile(void)
 {
+#ifndef __EMSCRIPTEN__
     fclose(logFile);
+#endif
 }
 
 void logMsg(const char *msg)
@@ -32,19 +35,10 @@ void logMsg(const char *msg)
     fprintf(logFile, "%s\n", msg);
 }
 
-void logSDLErrQuit(const char *msg)
+int logMsgQuit(const char *msg)
 {
     logMsg(msg);
-    closeSDLErr(msg);
-    closeLogFile();
-    exit(-1);
-}
-
-void logErrQuit(const char *msg)
-{
-    logMsg(msg);
-    fclose(logFile);
-    exit(-1);
+    return -1;
 }
 
 void dumpRegAndPointerInfo(void)

@@ -16,11 +16,11 @@
 
 static void logOp(const char *msg)
 {
-    #ifndef NDEBUG
+#ifndef NDEBUG
     char errMsg[100];
     sprintf(errMsg, "0x%04X (PC: 0x%04X) - %s", cpu.opcode.ins, cpu.PC, msg);
     logMsg(errMsg);
-    #endif
+#endif
 }
 
 void jmp(const uint16_t addr, const char *logMsg)
@@ -86,8 +86,9 @@ void bcd(void)
     cpu.mem[cpu.I + 2] = cpu.V[cpu.opcode.x] % 10;
 }
 
-void loadMask(uint8_t sb, const char *logMsg)
+int loadMask(uint8_t sb, const char *logMsg)
 {
+    int isErr = 0 ;
     logOp(logMsg);
 
     const uint8_t oF = cpu.V[cpu.opcode.x] & sb;
@@ -98,8 +99,10 @@ void loadMask(uint8_t sb, const char *logMsg)
         cpu.V[0xF] = oF >> 7;
         cpu.V[cpu.opcode.x] <<= 1;
     } else {
-        logSDLErrQuit("INNAPPROPRIATE BIT MASK");
+        isErr = logMsgQuit("INNAPPROPRIATE BIT MASK");
     }
+
+    return isErr;
 }
 
 void regMemTrans(uint8_t *dst, const uint8_t *src, const uint16_t srcSize, const char *logMsg)

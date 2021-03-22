@@ -8,7 +8,7 @@
 
 CC=x86_64-w64-mingw32-gcc
 INCLUDE_DIRS=-I.
-WIN_ADDITIONAL_CFLAGS=-mwindows $(INCLUDE_DIRS) -I$(WIN_MINGW_INC) 
+WIN_ADDITIONAL_CFLAGS=$(INCLUDE_DIRS) -I$(WIN_MINGW_INC) #-mwindows 
 LNX_INCLUDE_DIRS=$(INCLUDE_DIRS) -I/usr/include -I/usr/include/x86_64-linux-gnu
 # O1-O3 and Og optimization messes with emulation
 CFLAGS=-g -pedantic -Wall -std=c11
@@ -44,4 +44,4 @@ $(LNX_BIN): $(OBJS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 # Adding emscripten
-# emcc main.c logging.c io.c ins.c cpu.c -o out.html -Wall -g -lm -s USE_SDL=2 -s WASM=1 -s EXPORTED_FUNCTIONS="['_main']" -s EXPORTED_RUNTIME_METHODS="['ccall', 'cwrap']" -I.
+# emcc main.c logging.c io.c ins.c cpu.c -o emulator.html -Wall -g -lm -s USE_SDL=2 --pre-js emsdkpre.js --preload-file Cave.ch8 -I.
