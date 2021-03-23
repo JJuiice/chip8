@@ -25,21 +25,25 @@
 typedef struct Context {
     char *filepath;
     char *filename;
-    int isErr;
+    int exec;
+    uint32_t sdlTimestamp;
 } Context;
 
+const uint16_t FRAME60_MS = 1000 / 60;
+const uint16_t CLOCK_MS = 1000 / CLOCK_SPEED;
+ 
 static void getGameName(Context *ctx)
 {
     if(strlen(ctx->filepath) < 5) {
-        ctx->isErr = logMsgQuit("A VALID *.ch8 BINARY FILE MUST BE PROVIDED");
+        ctx->exec = !logMsgQuit("A VALID *.ch8 BINARY FILE MUST BE PROVIDED");
         return;
     }
  
     char delimiter;
 #if defined _WIN32 || defined __CYGWIN__
-        delimiter = '\\';
+    delimiter = '\\';
 #else
-        delimiter = '/';
+    delimiter = '/';
 #endif
 
     char *filename = NULL;
@@ -52,82 +56,85 @@ static void getGameName(Context *ctx)
     ctx->filename = strdup(filename);
 }
 
-static void game(void *arg)
+static void init(Context *ctx)
 {
-    const uint16_t FRAME60_MS = 1000 / 60;
-    const uint16_t CLOCK_MS = 1000 / CLOCK_SPEED;
- 
-    Context *ctx = arg;
-    uint32_t timerTick = getSDLTimestamp();
-    
-    ctx->isErr = setupIO(ctx->filename);
+    getGameName(ctx);
+    gameInit();
+    loadGame(ctx->filepath);
+
+    if(!(ctx->exec))
+        return;
+
+    ctx->exec = !setupIO(ctx->filename);
     free(ctx->filename);
     ctx->filename = NULL;
+}
 
-    uint8_t exec = !(ctx->isErr);
-    while(exec) {
-        uint32_t startTick = getSDLTimestamp();
+static void gameLoop(void *arg)
+{
+    Context *ctx = arg;
+    uint32_t startTick = getSDLTimestamp();
         
-        if(startTick - timerTick >= FRAME60_MS) {
-            ctx->isErr = updateTimers();
-            timerTick = getSDLTimestamp();
-        }
+    if(startTick - ctx->sdlTimestamp >= FRAME60_MS) {
+        ctx->exec = !updateTimers();
+        ctx->sdlTimestamp = getSDLTimestamp();
+    }
 
-        ctx->isErr = ctx->isErr ? ctx->isErr : emulateCycle();
+    ctx->exec = ctx->exec ? !emulateCycle() : ctx->exec;
 
-        if(ctx->isErr)
-            break;
+    if(ctx->exec && cpu.dFlag) {
+        ctx->exec = !drawGfx();
+        cpu.dFlag = 0;
+    }
 
-        if(cpu.dFlag) {
-            ctx->isErr = drawGfx();
-            cpu.dFlag = 0;
-            if(ctx->isErr)
-                break;
-        }
-        
+    if(ctx->exec) {
         uint32_t emulationSpeed = getSDLTimestamp() - startTick;
         if (emulationSpeed < CLOCK_MS)
             delayGfx(CLOCK_MS - emulationSpeed);
            
-        exec = !recvEvtQuit();
+        ctx->exec = !recvEvtQuit();
     }
-
-    logMsg("Cleaning IO");
-    int cleanStatus = cleanIO();
-    ctx->isErr = cleanStatus || ctx->isErr;
+ 
 #ifdef __EMSCRIPTEN__
-    emscripten_cancel_main_loop();
+    if(!(ctx->exec))
+        emscripten_cancel_main_loop();
 #endif
+}
+
+static void cleanup(Context *ctx)
+{
+    logMsg("Cleaning IO");
+    ctx->exec = cleanIO();
+    closeLogFile();
 }
 
 int main(int argc, char **argv)
 {
     Context ctx;
+    ctx.exec = 1;
 
     openLogFile();
 
     if(argc != 2) {
-        ctx.isErr = logMsgQuit("SINGLE CHIP-8 BINARY ARGUMENT REQUIRED");
+        ctx.exec = logMsgQuit("SINGLE CHIP-8 BINARY ARGUMENT REQUIRED");
         closeLogFile();
-        return ctx.isErr;
+        return ctx.exec;
     }
 
     ctx.filepath = argv[1];
 
-    getGameName(&ctx);
-    gameInit();
-    loadGame(ctx.filepath);
+    init(&ctx);
 
-    if(!ctx.isErr) {
-        ctx.isErr = 0;
-
+    if(ctx.exec) {
+        ctx.sdlTimestamp = getSDLTimestamp();
 #ifdef __EMSCRIPTEN__
-        emscripten_set_main_loop_arg(game, &ctx, 0, EMS_SIM_INF_LOOP);
+        emscripten_set_main_loop_arg(gameLoop, &ctx, 0, EMS_SIM_INF_LOOP);
 #else
-        game(&ctx);
+        while(ctx.exec)
+            gameLoop(&ctx);
 #endif
     }
-
-    closeLogFile();
-    return ctx.isErr;
+    
+    cleanup(&ctx);
+    return ctx.exec;
 }

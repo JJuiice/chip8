@@ -8,17 +8,25 @@
 
 CC=x86_64-w64-mingw32-gcc
 INCLUDE_DIRS=-I.
-WIN_ADDITIONAL_CFLAGS=$(INCLUDE_DIRS) -I$(WIN_MINGW_INC) #-mwindows 
-LNX_INCLUDE_DIRS=$(INCLUDE_DIRS) -I/usr/include -I/usr/include/x86_64-linux-gnu
+WIN_ADDITIONAL_CFLAGS=$(INCLUDE_DIRS) -I$(WIN_MINGW_INC) -mwindows -std=c11 
+LNX_ADDITIONAL_CFLAGS=$(INCLUDE_DIRS) -I/usr/include -I/usr/include/x86_64-linux-gnu -std=gnu11
 # O1-O3 and Og optimization messes with emulation
-CFLAGS=-g -pedantic -Wall -std=c11
+CFLAGS=-pedantic -Wall
 LFLAGS=-lm -lSDL2 -lSDL2main
-WIN_EXE=emulator.exe
-LNX_BIN=emulator.out
-DEPS=chip8.h cpu.h io.h ins.h logging.h
+BUILD_DIR=build
+EXE=emulator
+WIN_EXE=$(EXE).exe
+LNX_BIN=$(EXE).out
+DEPS=cpu.h io.h ins.h logging.h
 OBJS=main.o cpu.o io.o ins.o logging.o
 
-.PHONY: all clean win lnx
+ifdef OS
+	RM = del /Q
+else
+	RM = rm -r
+endif
+
+.PHONY: all clean win lnx emcc
 
 all: win
 
@@ -27,21 +35,24 @@ win: LFLAGS+=-L$(WIN_MINGW_LIBS)
 win: $(WIN_EXE) 
 
 lnx: CC=gcc
-lnx: CFLAGS+=$(LNX_INCLUDE_DIRS)
+lnx: CFLAGS+=$(LNX_INCLUDE_CFLAGS)
 lnx: $(LNX_BIN)
 
-clean:
-	rm -f $(OBJS) $(WIN_EXE) $(LNX_BIN)
+emcc: | $(BUILD_DIR)
+	@echo Module['arguments'] = ["$(TARGET_ROM)"]; > $(BUILD_DIR)/emsdkpre.js
+	emcc main.c logging.c io.c ins.c cpu.c -o $(BUILD_DIR)/$(EXE).html -Wall -lm -s USE_SDL=2 --pre-js $(BUILD_DIR)/emsdkpre.js --preload-file "$(TARGET_ROM)" -I.
 
-$(WIN_EXE): $(OBJS)
-	$(CC) -o $@ $^ $(CFLAGS) $(LFLAGS)
+clean: | $(BUILD_DIR)
+	$(RM) $(BUILD_DIR)
 
-$(LNX_BIN): $(OBJS)
-	$(CC) -o $@ $^ $(CFLAGS) $(LFLAGS)
-	chmod 755 $@
+$(OBJS): %.o: %.c $(DEPS) | $(BUILD_DIR)
+	$(CC) -c -o $(BUILD_DIR)/$@ $< $(CFLAGS)
 
-%.o: %.c $(DEPS) 
-	$(CC) -c -o $@ $< $(CFLAGS)
+$(WIN_EXE): $(OBJS) | $(BUILD_DIR)
+	cd $(BUILD_DIR) && $(CC) -o $@ $^ $(LFLAGS)
 
-# Adding emscripten
-# emcc main.c logging.c io.c ins.c cpu.c -o emulator.html -Wall -g -lm -s USE_SDL=2 --pre-js emsdkpre.js --preload-file Cave.ch8 -I.
+$(LNX_BIN): $(OBJS) | $(BUILD_DIR)
+	cd $(BUILD_DIR) && $(CC) -o $@ $^ $(LFLAGS) && chmod 755 $@
+
+$(BUILD_DIR):
+	mkdir $(BUILD_DIR) 
