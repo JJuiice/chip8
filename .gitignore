@@ -135,7 +135,4 @@ tags
 *.log
 
 # Ignore emscripten output
-*.html
-*.js
-*.wasm
-*.data
+build/
