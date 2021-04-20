@@ -1,8 +1,0 @@
-{
-    "files.associations": {
-        "cmath": "cpp",
-        "*.tcc": "cpp",
-        "limits": "cpp"
-    },
-    "C_Cpp.default.cStandard": "c11"
-}

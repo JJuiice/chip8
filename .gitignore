@@ -18,8 +18,8 @@
 
 # Libraries
 *.lib
-*.a
-*.la
+# *.a
+# *.la
 *.lo
 
 # Shared objects (inc. Windows DLLs)
@@ -124,15 +124,25 @@ fabric.properties
 .idea/caches/build_file_checksums.ser
 
 
-# Nvim Setup
-tags
-.ccls-cache/
-
 # CHIP-8 Binaries
 *.ch8
 
 # LOG Files
 *.log
 
-# Ignore emscripten output
-build/
+
+# CMake
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+
+# Build Dir
+build
