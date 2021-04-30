@@ -17,6 +17,7 @@ Chip-8 emulator written in C
 git clone https://github.com/JJuiice/chip8.git
 cd chip8
 mkdir build
+cd build
 cmake [-G "MinGW Makefiles"] ..
 make
 ``` 
